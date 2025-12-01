@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<installer-gui-script minSpecVersion="2">
+    <title>Tracebit CLI</title>
+    <organization>com.tracebit</organization>
+    <domains enable_currentUserHome="true"/>
+    <options customize="never" rootVolumeOnly="false" hostArchitectures="__HOST_ARCH__"/>
+
+    <welcome file="welcome.html" mime-type="text/html"/>
+    <conclusion file="conclusion.html" mime-type="text/html"/>
+
+    <!-- Define the choices -->
+    <choices-outline>
+        <line choice="default">
+            <line choice="com.tracebit.cli.community"/>
+        </line>
+    </choices-outline>
+
+    <choice id="default"/>
+
+    <choice id="com.tracebit.cli.community" visible="false">
+        <pkg-ref id="com.tracebit.cli.community"/>
+    </choice>
+
+    <!-- Define package references -->
+    <pkg-ref id="com.tracebit.cli.community" version="__VERSION__" onConclusion="none">install-tracebit-component.pkg</pkg-ref>
+</installer-gui-script>

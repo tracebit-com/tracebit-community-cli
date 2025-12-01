@@ -1,0 +1,6 @@
+{
+  "$schema": "https://xunit.net/schema/current/xunit.runner.schema.json",
+  "parallelizeTestCollections": false,
+  "maxParallelThreads": 1,
+  "_comment": "Parallelization is disabled because the CLI uses exclusive file locking on state.json. When multiple CLI processes run concurrently, they compete for the file lock, causing IOException and test failures."
+}

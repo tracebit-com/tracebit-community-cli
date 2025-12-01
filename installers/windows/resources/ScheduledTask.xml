@@ -1,0 +1,42 @@
+<?xml version="1.0"?>
+<Task xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
+  <RegistrationInfo>
+    <Description>Tracebit CLI refresh task</Description>
+  </RegistrationInfo>
+  <Triggers>
+    <TimeTrigger>
+      <Enabled>true</Enabled>
+      <StartBoundary>2025-01-01T00:00:00</StartBoundary>
+      <Repetition>
+        <Interval>PT1H</Interval>
+        <StopAtDurationEnd>false</StopAtDurationEnd>
+      </Repetition>
+    </TimeTrigger>
+  </Triggers>
+  <Settings>
+    <Hidden>true</Hidden>
+    <Enabled>true</Enabled>
+    <AllowStartOnDemand>true</AllowStartOnDemand>
+    <StartWhenAvailable>true</StartWhenAvailable>
+    <DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>
+    <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>
+    <ExecutionTimeLimit>PT5M</ExecutionTimeLimit>
+  </Settings>
+  <Actions>
+    <Exec>
+      <Command>tracebit.exe</Command>
+      <Arguments>refresh</Arguments>
+    </Exec>
+  </Actions>
+  <Principals>
+    <Principal>
+      <LogonType>S4U</LogonType>
+      <RunLevel>LeastPrivilege</RunLevel>
+    </Principal>
+  </Principals>
+</Task>
+
+
+
+
+

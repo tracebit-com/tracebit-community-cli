@@ -1,0 +1,39 @@
+name: Sync to Public Repository
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - '*'
+
+jobs:
+  sync:
+    name: Push to public repository
+    # Only run in the internal repository, not in the public one, and only for main or tags
+    if: github.repository == 'tracebit-com/tracebit-cli-internal' && (github.ref == 'refs/heads/main' || github.ref_type == 'tag')
+    runs-on: ubuntu-latest
+    environment: production
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history needed for pushing
+          fetch-tags: true
+          persist-credentials: false  # Don't persist the default GITHUB_TOKEN
+      
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+      
+      - name: Add public repository as remote
+        env:
+          PUBLIC_REPO_TOKEN: ${{ secrets.PUBLIC_REPO_TOKEN }}
+        run: |
+          git remote add public https://x-access-token:${PUBLIC_REPO_TOKEN}@github.com/tracebit-com/tracebit-cli.git
+      
+      - name: Push to public repository
+        run: |
+          git push public ${{ github.ref }}

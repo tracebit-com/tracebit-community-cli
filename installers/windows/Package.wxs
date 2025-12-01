@@ -1,0 +1,41 @@
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+    xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui"
+    xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util">
+    <Package
+        Name="Tracebit"
+        Manufacturer="Tracebit Limited"
+        Version="$(Version)"
+        UpgradeCode="adc66fbb-d223-49b1-b01c-f87a80f1d055"
+        Scope="perUser">
+        <MediaTemplate EmbedCab="yes" />
+        <Icon Id="tracebit.exe" SourceFile="tracebit.exe" />
+        <Property Id="ARPPRODUCTICON" Value="tracebit.exe" />
+        <Property Id="WIXUI_EXITDIALOGOPTIONALTEXT" Value="The Tracebit CLI has been successfully installed.&#13;&#10;To get started, open a terminal and run:&#13;&#10;&#13;&#10;tracebit auth&#13;&#10;&#13;&#10;The Tracebit CLI will run automatically in the background to refresh your canary credentials." />
+        <Property Id="MSIRESTARTMANAGERCONTROL" Value="Disable" />
+        <MajorUpgrade AllowSameVersionUpgrades="yes" DowngradeErrorMessage="A newer version of the Tracebit CLI is already installed." />
+        <ui:WixUI Id="WixUI_Minimal" />
+        <WixVariable
+          Id="WixUIDialogBmp"
+          Value="logo-dialog.png"
+          />
+        <WixVariable
+          Id="WixUIBannerBmp"
+          Value="logo-banner.png"
+          />
+
+        <CustomAction Id="LaunchDaemon"
+                      Directory="INSTALLFOLDER"
+                      ExeCommand="&quot;[INSTALLFOLDER]tracebit-daemon.exe&quot;"
+                      Execute="deferred"
+                      Impersonate="yes"
+                      Return="asyncNoWait" />
+
+        <InstallExecuteSequence>
+            <Custom Action="LaunchDaemon" Before="InstallFinalize" Condition="NOT REMOVE" />
+        </InstallExecuteSequence>
+
+        <Feature Id="Main">
+            <ComponentGroupRef Id="Cli" />
+        </Feature>
+    </Package>
+</Wix>

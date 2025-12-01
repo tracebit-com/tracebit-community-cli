@@ -1,0 +1,55 @@
+name: Format and Qodana
+
+on:
+  workflow_call:
+    secrets:
+      qodana-token:
+        description: 'Qodana token'
+        required: true
+
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: 1
+
+jobs:
+  validate-format:
+    name: "Format"
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Setup .NET Core SDK
+        uses: actions/setup-dotnet@v3
+        with:
+          global-json-file: ./global.json
+      - name: Install tools
+        run: dotnet tool restore
+      - name: Inspect code
+        run: 'dotnet format'
+      - name: Check for changes
+        run: |
+          git diff --exit-code --stat || (echo "Code formatting changes detected. Run dotnet format and commit changes." && exit 1)
+
+  qodana:
+    runs-on: linux-x64
+    permissions:
+      contents: write
+      pull-requests: write
+      checks: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Setup .NET Core SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: ./global.json
+      - name: Install dependencies
+        run: dotnet restore
+      - name: Install dependent tools
+        run: dotnet tool restore
+      - name: 'Qodana Scan'
+        uses: JetBrains/qodana-action@e5d20b1260e99a93210d46ec8882c83978a09036
+        with:
+          args: --baseline,qodana.sarif.json,--fail-threshold,0
+        env:
+          QODANA_TOKEN: ${{ secrets.qodana-token }}

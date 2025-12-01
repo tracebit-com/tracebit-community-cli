@@ -1,0 +1,98 @@
+name: Tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    name: Test on ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore --configuration Release
+
+      - name: Run unit tests
+        run: dotnet test Tracebit.Cli.Tests/Tracebit.Cli.Tests.csproj --no-build --configuration Release --logger trx --collect:"XPlat Code Coverage" --settings coverlet.runsettings --results-directory ./coverage
+
+      - name: Run integration tests
+        run: dotnet test Tracebit.Cli.Integration.Tests/Tracebit.Cli.Integration.Tests.csproj --no-build --configuration Release --logger trx --collect:"XPlat Code Coverage" --settings coverlet.runsettings --results-directory ./coverage
+
+      - name: Run E2E tests
+        run: dotnet test Tracebit.Cli.E2E.Tests/Tracebit.Cli.E2E.Tests.csproj --no-build --configuration Release --logger trx --collect:"XPlat Code Coverage" --settings coverlet.runsettings --results-directory ./coverage
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-${{ matrix.os }}
+          path: ./coverage/**/*
+
+  coverage:
+    name: Code Coverage Report
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Download coverage artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: test-results-ubuntu-latest
+          path: ./coverage
+
+      - name: Install ReportGenerator
+        run: dotnet tool install --global dotnet-reportgenerator-globaltool
+
+      - name: Merge coverage reports
+        run: reportgenerator -reports:"coverage/**/coverage.cobertura.xml" -targetdir:"merged-coverage" -reporttypes:"Cobertura"
+
+      - name: Code Coverage Summary
+        uses: irongut/CodeCoverageSummary@51cc3a756ddcd398d447c044c02cb6aa83fdae95
+        with:
+          filename: merged-coverage/Cobertura.xml
+          badge: true
+          fail_below_min: false
+          format: markdown
+          hide_branch_rate: false
+          hide_complexity: true
+          indicators: true
+          output: both
+          thresholds: '40 60'
+
+      - name: Add Coverage PR Comment
+        uses: marocchino/sticky-pull-request-comment@773744901bac0e8cbb5a0dc842800d45e9b2b405
+        if: github.event_name == 'pull_request'
+        with:
+          recreate: true
+          path: code-coverage-results.md
+
+
+

@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net9.0-windows</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <PublishTrimmed>true</PublishTrimmed>
+    <TrimMode>full</TrimMode>
+    <PublishAot>true</PublishAot>
+    <AssemblyName>tracebit-daemon</AssemblyName>
+    <AssemblyTitle>Tracebit</AssemblyTitle>
+    <Product>Tracebit</Product>
+    <CopyOutputSymbolsToPublishDirectory>false</CopyOutputSymbolsToPublishDirectory>
+    <VersionPrefix>0.0.1</VersionPrefix>
+    <ApplicationIcon>../Tracebit.Cli/Resources/logo.ico</ApplicationIcon>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(GITHUB_ACTIONS)' == 'true'">
+    <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(GITHUB_REF)' == 'refs/heads/main'">
+    <IncludeSourceFilesProjectOutputGroup>false</IncludeSourceFilesProjectOutputGroup>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Tracebit.Cli\Tracebit.Cli.csproj" />
+  </ItemGroup>
+
+</Project>

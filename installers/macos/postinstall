@@ -1,0 +1,34 @@
+#!/bin/bash
+
+# Get the user who invoked the installer
+CURRENT_USER="${USER}"
+CURRENT_UID=$(id -u "${CURRENT_USER}")
+
+# Add ~/.local/bin to PATH in shell profile files if not already present
+add_to_path() {
+    local profile_file="$1"
+    local path_line='export PATH="$HOME/.local/bin:$PATH"'
+    
+    # Create the file if it doesn't exist
+    touch "$profile_file"
+    
+    # Check if the PATH already contains ~/.local/bin
+    if ! grep -q '$HOME/.local/bin' "$profile_file" && ! grep -q '~/.local/bin' "$profile_file"; then
+        echo "" >> "$profile_file"
+        echo "# Added by Tracebit CLI installer" >> "$profile_file"
+        echo "$path_line" >> "$profile_file"
+    fi
+}
+
+# Add to zsh profile (default shell on modern macOS)
+if [ -n "$HOME" ]; then
+    add_to_path "${HOME}/.zprofile"
+    # Also add to bash profile for bash users
+    add_to_path "${HOME}/.bash_profile"
+fi
+
+# Load the LaunchAgent for the current user
+launchctl bootout gui/${CURRENT_UID} "${HOME}/Library/LaunchAgents/com.tracebit.cli.community.plist" 2>/dev/null || true
+launchctl bootstrap gui/${CURRENT_UID} "${HOME}/Library/LaunchAgents/com.tracebit.cli.community.plist" 2>/dev/null || true
+
+exit 0

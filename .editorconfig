@@ -1,0 +1,25 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+indent_size = 4
+indent_style = space
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+csharp_preserve_single_line_blocks = true
+csharp_preserve_single_line_statements = false
+
+# Sort usings
+dotnet_separate_import_directive_groups = true
+dotnet_sort_system_directives_first = true
+
+# Remove unused imports
+dotnet_diagnostic.IDE0005.severity = error
+
+[*.{xml,csproj}]
+indent_size = 2
+
+[*.{yml,yaml}]
+indent_size = 2

@@ -1,0 +1,19 @@
+<Project Sdk="WixToolset.Sdk/6.0.2">
+    <ItemGroup>
+        <PackageReference Include="WixToolset.UI.wixext" Version="6.0.2" />
+        <PackageReference Include="WixToolset.Util.wixext" Version="6.0.2" />
+        <BindPath Include="..\..\Build" />
+        <BindPath Include="resources" />
+        <BindVariable Include="WixUILicenseRtf=license.rtf" />
+    </ItemGroup>
+    <PropertyGroup>
+        <OutputPath>..\..\Build</OutputPath>
+        <SuppressPdbOutput>true</SuppressPdbOutput>
+    </PropertyGroup>
+    <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+        <DefineConstants>Version=$(Version)</DefineConstants>
+    </PropertyGroup>
+    <PropertyGroup Condition="'$(Configuration)' != 'Release'">
+        <DefineConstants>Version=0.0.0</DefineConstants>
+    </PropertyGroup>
+</Project>
