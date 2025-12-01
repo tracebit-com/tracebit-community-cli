@@ -36,7 +36,7 @@ pkgbuild --root installer/payload \
          --scripts installer/scripts \
          --identifier com.tracebit.cli.community \
          --version $version \
-         --install-location ~ \
+         --install-location / \
          installer/install-tracebit-component.pkg
 
 echo "→ Building product archive with distribution definition..."
