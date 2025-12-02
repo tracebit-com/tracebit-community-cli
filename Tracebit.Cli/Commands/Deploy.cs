@@ -294,6 +294,8 @@ static class Deploy
                     deployedCredentials.Add(emailCredential);
                     AnsiConsole.MarkupLineInterpolated(
                         $"[darkgoldenrod]Email[/] canary with subject: [blue]'{emailCredential.EmailSubject}'[/] sent to [blue]'{emailCredential.Target}'[/] from [blue]'{emailCredential.EmailFrom}'[/]");
+                    AnsiConsole.MarkupLine("[yellow]The email may take a few minutes to arrive and could end up in your spam folder.[/]");
+                    AnsiConsole.MarkupLine("[yellow]Make sure to allow showing images in emails from that domain.[/]");
                     Utils.PrintCanaryCredentialSuccessfullyDeployedMessage(emailCredential);
                 }
                 catch (QuotaExceededException) { }
@@ -440,6 +442,7 @@ static class Deploy
 
             AnsiConsole.MarkupLineInterpolated(
                 $"[green]Email canary with subject: '{credential.EmailSubject}' sent to '{credential.Target}' from '{credential.EmailFrom}'[/]");
+            AnsiConsole.MarkupLine("[yellow]The email may take a few minutes to arrive and could end up in your spam folder.[/]");
             AnsiConsole.MarkupLine("[yellow]Make sure to allow showing images in emails from that domain.[/]");
 
             var triggerableAfter = credential.CredentialTriggerableAfter;

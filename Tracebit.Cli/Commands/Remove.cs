@@ -13,7 +13,7 @@ namespace Tracebit.Cli.Commands;
 public class Remove
 {
     public static readonly Command BaseCommand = new("remove",
-        "Remove canaries from this machine");
+        "Remove canaries from this machine. Tracebit will no longer monitor them");
 
     public static Command Command(IServiceProvider services)
     {
@@ -107,7 +107,7 @@ public class Remove
             {
                 AnsiConsole.MarkupLineInterpolated($"Removing {credentialToDelete.Markup()}");
                 if (await RemoveCredentialByTypeAsync(tracebitClient, credentialToDelete, cancellationToken))
-                    AnsiConsole.MarkupLineInterpolated($"[green]Credential {credentialToDelete.Markup()} removed[/]");
+                    AnsiConsole.MarkupLineInterpolated($"[green]:check_mark_button: Credential {credentialToDelete.Markup()} removed[/]\n");
             }
 
             return 0;

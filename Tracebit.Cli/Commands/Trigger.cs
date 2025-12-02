@@ -77,10 +77,12 @@ public class Trigger
         switch (credential)
         {
             case AwsCredentialData aws:
-                await TriggerAwsCredentialAsync(aws, cancellationToken);
-                AnsiConsole.MarkupLineInterpolated($"[green]Credential {credential.Markup()} triggered[/]");
-                AnsiConsole.MarkupLineInterpolated($"[yellow]AWS canary alerts take ~5 minutes to come through[/]");
-                AnsiConsole.MarkupLineInterpolated($"[yellow]To find out more about this delay, check out our research on this topic here:\n{CloudTrailResearchLink}[/]");
+                if (await TriggerAwsCredentialAsync(aws, cancellationToken))
+                {
+                    AnsiConsole.MarkupLineInterpolated($"[green]Credential {credential.Markup()} triggered[/]");
+                    AnsiConsole.MarkupLineInterpolated($"[yellow]AWS canary alerts take ~5 minutes to come through[/]");
+                    AnsiConsole.MarkupLineInterpolated($"[yellow]To find out more about this delay, check out our research on this topic here:\n{CloudTrailResearchLink}[/]");
+                }
                 break;
             case SshCredentialData ssh:
                 await TriggerSshCredentialAsync(ssh, cancellationToken);
@@ -218,7 +220,7 @@ public class Trigger
                throw new MarkupException($"[red]{CultureInfo.InvariantCulture.TextInfo.ToTitleCase(T.PrettyTypeName).EscapeMarkup()} credential [blue]{name.EscapeMarkup()}[/] not found");
     }
 
-    private static async Task TriggerAwsCredentialAsync(AwsCredentialData awsCredential, CancellationToken cancellationToken)
+    private static async Task<bool> TriggerAwsCredentialAsync(AwsCredentialData awsCredential, CancellationToken cancellationToken)
     {
         if (string.IsNullOrEmpty(awsCredential.AwsProfile))
         {
@@ -236,7 +238,17 @@ public class Trigger
             CreateNoWindow = true
         };
         AnsiConsole.MarkupLineInterpolated($"[italic gray]{process.StartInfo.FileName} {process.StartInfo.Arguments}[/]");
-        process.Start();
+
+        try
+        {
+            process.Start();
+        }
+        catch (System.ComponentModel.Win32Exception)
+        {
+            AnsiConsole.MarkupLine("[red]The AWS CLI is required to trigger this canary but was not found.[/]");
+            AnsiConsole.MarkupLine("Please install the AWS CLI and try again: [blue link]https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html[/]");
+            return false;
+        }
 
         var (output, error) = await AnsiConsole.Status().DefaultSpinner().StartAsync("Triggering...", async _ =>
         {
@@ -260,6 +272,8 @@ public class Trigger
         {
             throw new Exception($"AWS canary not triggered, no sts credentials found in output: {output}");
         }
+
+        return true;
     }
 
     private static async Task TriggerSshCredentialAsync(CredentialData credentialData, CancellationToken cancellationToken)
