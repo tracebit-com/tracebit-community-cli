@@ -116,6 +116,7 @@ jobs:
           KEYCHAIN_PASSWORD: ${{ secrets.MACOS_KEYCHAIN_PASSWORD }}
           SIGN_PACKAGE: ${{ inputs.sign }}
           HOST_ARCH: ${{ matrix.targets.arch }}
+          VERSION: ${{ inputs.version }}
         run: ./installers/macos/package-and-sign.sh
       - name: Build installer (windows)
         if: startsWith(matrix.targets.tag, 'windows-')

@@ -5,6 +5,7 @@ set -euo pipefail
 BUILD_USER_ID="MSY6YB87G8"
 KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
 SIGN_PACKAGE="${SIGN_PACKAGE:-false}"
+VERSION="${VERSION:-0.0.0}"
 
 # Detect host architecture, default to current arch for local builds
 HOST_ARCH="${HOST_ARCH:-$(uname -m)}"
@@ -29,18 +30,18 @@ cp Build/tracebit installer/payload/.local/bin/
 cp installers/macos/com.tracebit.cli.community.plist installer/payload/Library/LaunchAgents
 cp installers/macos/postinstall installer/scripts
 
-version=$(./installer/payload/.local/bin/tracebit --version)
+echo $VERSION
 
 echo "→ Building component package..."
 pkgbuild --root installer/payload \
          --scripts installer/scripts \
          --identifier com.tracebit.cli.community \
-         --version $version \
+         --version $VERSION \
          --install-location / \
          installer/install-tracebit-component.pkg
 
 echo "→ Building product archive with distribution definition..."
-sed -e "s/__HOST_ARCH__/$HOST_ARCH_XML/g" -e "s/__VERSION__/$version/g" \
+sed -e "s/__HOST_ARCH__/$HOST_ARCH_XML/g" -e "s/__VERSION__/$VERSION/g" \
     installers/macos/distribution.xml > installer/distribution.xml
 cp -r installers/macos/resources installer/
 productbuild --distribution installer/distribution.xml \

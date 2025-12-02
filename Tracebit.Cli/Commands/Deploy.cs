@@ -64,8 +64,6 @@ static class Deploy
         Description = "The name of the local SSH key file"
     };
 
-    private const string PromptColour = "[darkgoldenrod]";
-
     public static Command Command(IServiceProvider services)
     {
         ConfigureAwsProfileValidation();
@@ -629,31 +627,10 @@ static class Deploy
     private static async Task<(string, string, string, Labels)> AwsPromptInteractiveAsync(string defaultName, bool defaultNameExists, string defaultProfile, string defaultRegion, CancellationToken cancellationToken)
     {
         defaultName = defaultNameExists ? $"{defaultName}-{Utils.GenerateRandomString(5)}" : defaultName;
-        var name = await AnsiConsole.PromptAsync(
-            new TextPrompt<string>($"{PromptColour}Name[/]")
-                .DefaultValue(defaultName)
-                .DefaultValueStyle(Style.Parse("silver"))
-                .Validate(s => s.Any(char.IsWhiteSpace) ? ValidationResult.Error("Whitespace in name not supported") : ValidationResult.Success()),
-            cancellationToken);
-        var profile = await AnsiConsole.PromptAsync(
-            new TextPrompt<string>($"{PromptColour}AWS profile[/]")
-                .DefaultValue(defaultProfile)
-                .DefaultValueStyle(Style.Parse("silver"))
-                .Validate(s => s.Any(char.IsWhiteSpace) ? ValidationResult.Error("Whitespace in profile not supported") : ValidationResult.Success()),
-            cancellationToken);
-        var region = await AnsiConsole.PromptAsync(
-            new TextPrompt<string>($"{PromptColour}AWS region[/]")
-                .DefaultValue(defaultRegion)
-                .DefaultValueStyle(Style.Parse("silver"))
-                .Validate(s => Utils.AwsRegions().Contains(s) ? ValidationResult.Success() : ValidationResult.Error("Invalid AWS region"))
-            , cancellationToken);
-        var labels = _labelsParsing(await AnsiConsole.PromptAsync(
-            new TextPrompt<string>($"{PromptColour}Labels[/]")
-                .DefaultValue("")
-                .DefaultValueStyle(Style.Parse("silver"))
-                .Validate(s => Utils.IsLabelFormat(s) ? ValidationResult.Success() : ValidationResult.Error(Utils.InvalidLabelFormatMessage())),
-            cancellationToken)
-        );
+        var name = await AnsiConsole.PromptAsync(TextPrompts.NamePrompt(defaultName), cancellationToken);
+        var profile = await AnsiConsole.PromptAsync(TextPrompts.ProfilePrompt(defaultProfile), cancellationToken);
+        var region = await AnsiConsole.PromptAsync(TextPrompts.RegionPrompt(defaultRegion), cancellationToken);
+        var labels = _labelsParsing(await AnsiConsole.PromptAsync(TextPrompts.LabelsPrompt, cancellationToken));
         AnsiConsole.WriteLine();
         return (name, profile, region, labels);
     }
@@ -661,36 +638,17 @@ static class Deploy
     private static async Task<(string, Labels, string)> SshPromptInteractiveAsync(string defaultName, bool defaultNameExists, string defaultSshKeyFileName, CancellationToken cancellationToken)
     {
         defaultName = defaultNameExists ? $"{defaultName}-{Utils.GenerateRandomString(5)}" : defaultName;
-        var name = await AnsiConsole.PromptAsync(
-            new TextPrompt<string>($"{PromptColour}Name[/]")
-                .DefaultValue(defaultName)
-                .DefaultValueStyle(Style.Parse("silver"))
-                .Validate(s => s.Any(char.IsWhiteSpace) ? ValidationResult.Error("Whitespace in name not supported") : ValidationResult.Success()),
-            cancellationToken);
-        var labels = _labelsParsing(await AnsiConsole.PromptAsync(
-            new TextPrompt<string>($"{PromptColour}Labels[/]")
-                .DefaultValue("")
-                .DefaultValueStyle(Style.Parse("silver")),
-            cancellationToken)
-        );
+        var name = await AnsiConsole.PromptAsync(TextPrompts.NamePrompt(defaultName), cancellationToken);
+        var labels = _labelsParsing(await AnsiConsole.PromptAsync(TextPrompts.LabelsPrompt, cancellationToken));
         // NOTE: only does a whitespace check for now, not legal filename checks yet like how the option does AcceptLegalFileNamesOnly()
-        var sshKeyFileName = await AnsiConsole.PromptAsync(
-            new TextPrompt<string>($"{PromptColour}SSH key file[/]").DefaultValue(defaultSshKeyFileName)
-                .DefaultValueStyle(Style.Parse("silver"))
-                .Validate(s => s.Any(char.IsWhiteSpace) ? ValidationResult.Error("Whitespace in name not supported") : ValidationResult.Success())
-            , cancellationToken);
+        var sshKeyFileName = await AnsiConsole.PromptAsync(TextPrompts.SshKeyFileNamePrompt(defaultSshKeyFileName), cancellationToken);
         AnsiConsole.WriteLine();
         return (name, labels, sshKeyFileName);
     }
 
     private static async Task<Labels> EmailPromptInteractiveAsync(CancellationToken cancellationToken)
     {
-        var labels = _labelsParsing(await AnsiConsole.PromptAsync(
-            new TextPrompt<string>($"{PromptColour}Labels[/]")
-                .DefaultValue("")
-                .DefaultValueStyle(Style.Parse("silver")),
-            cancellationToken)
-        );
+        var labels = _labelsParsing(await AnsiConsole.PromptAsync(TextPrompts.LabelsPrompt, cancellationToken));
         AnsiConsole.WriteLine();
         return labels;
     }
@@ -698,18 +656,8 @@ static class Deploy
     private static async Task<(string, Labels)> CookiePromptInteractiveAsync(string defaultName, bool defaultNameExists, CancellationToken cancellationToken)
     {
         defaultName = defaultNameExists ? $"{defaultName}-{Utils.GenerateRandomString(5)}" : defaultName;
-        var name = await AnsiConsole.PromptAsync(
-            new TextPrompt<string>($"{PromptColour}Name[/]")
-                .DefaultValue(defaultName)
-                .DefaultValueStyle(Style.Parse("silver"))
-                .Validate(s => s.Any(char.IsWhiteSpace) ? ValidationResult.Error("Whitespace in name not supported") : ValidationResult.Success()),
-            cancellationToken);
-        var labels = _labelsParsing(await AnsiConsole.PromptAsync(
-            new TextPrompt<string>($"{PromptColour}Labels[/]")
-                .DefaultValue("")
-                .DefaultValueStyle(Style.Parse("silver")),
-            cancellationToken)
-        );
+        var name = await AnsiConsole.PromptAsync(TextPrompts.NamePrompt(defaultName), cancellationToken);
+        var labels = _labelsParsing(await AnsiConsole.PromptAsync(TextPrompts.LabelsPrompt, cancellationToken));
         AnsiConsole.WriteLine();
         return (name, labels);
     }
@@ -717,18 +665,8 @@ static class Deploy
     private static async Task<(string, Labels)> UsernamePasswordPromptInteractiveAsync(string defaultName, bool defaultNameExists, CancellationToken cancellationToken)
     {
         defaultName = defaultNameExists ? $"{defaultName}-{Utils.GenerateRandomString(5)}" : defaultName;
-        var name = await AnsiConsole.PromptAsync(
-            new TextPrompt<string>($"{PromptColour}Name[/]")
-                .DefaultValue(defaultName)
-                .DefaultValueStyle(Style.Parse("silver"))
-                .Validate(s => s.Any(char.IsWhiteSpace) ? ValidationResult.Error("Whitespace in name not supported") : ValidationResult.Success()),
-            cancellationToken);
-        var labels = _labelsParsing(await AnsiConsole.PromptAsync(
-            new TextPrompt<string>($"{PromptColour}Labels[/]")
-                .DefaultValue("")
-                .DefaultValueStyle(Style.Parse("silver")),
-            cancellationToken)
-        );
+        var name = await AnsiConsole.PromptAsync(TextPrompts.NamePrompt(defaultName), cancellationToken);
+        var labels = _labelsParsing(await AnsiConsole.PromptAsync(TextPrompts.LabelsPrompt, cancellationToken));
         AnsiConsole.WriteLine();
         return (name, labels);
     }
