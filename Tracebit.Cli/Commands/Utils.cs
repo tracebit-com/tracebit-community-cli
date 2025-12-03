@@ -125,6 +125,13 @@ static partial class Utils
         return LabelFormat().IsMatch(input);
     }
 
+    public static void PrintCanaryRemovalFailedUsingForce(string reason)
+    {
+        AnsiConsole.MarkupLineInterpolated(
+            $"[yellow]Credential could not be deactivated due to '{reason}', but will still be removed from your device. The credential can be deactivated manually at [blue link]{Constants.TracebitUrl}[/][/]"
+        );
+    }
+
     public static string InvalidLabelFormatMessage() => "Invalid label format, please use key1=value1,key2=value2";
 
     [GeneratedRegex("^([^,=]+=[^,=]+)(,[^,=]+=[^,=]+)*$")]

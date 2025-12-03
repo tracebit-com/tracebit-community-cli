@@ -45,6 +45,7 @@ jobs:
       MACOS_KEYCHAIN_PASSWORD: ${{ secrets.MACOS_KEYCHAIN_PASSWORD }}
   release:
     name: Release
+    if: github.ref_type == 'tag'
     runs-on: ubuntu-latest
     if: github.ref_type == 'tag'
     needs: build_cli

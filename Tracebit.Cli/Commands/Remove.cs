@@ -12,8 +12,15 @@ namespace Tracebit.Cli.Commands;
 
 public class Remove
 {
+    private static readonly Option<bool> ForceOption = new("--force")
+    {
+        Description = "Force remove canaries regardless of API responses",
+        DefaultValueFactory = _ => false,
+        Recursive = true
+    };
+
     public static readonly Command BaseCommand = new("remove",
-        "Remove canaries from this machine. Tracebit will no longer monitor them");
+        "Remove canaries from this machine. Tracebit will no longer monitor them") { ForceOption };
 
     public static Command Command(IServiceProvider services)
     {
@@ -27,6 +34,8 @@ public class Remove
         BaseCommand.SetAction(async (parseResult, cancellationToken) =>
         {
             var tracebitClient = services.GetRequiredService<TracebitClient>();
+            var force = parseResult.GetRequiredValue(ForceOption);
+
             var credentials = StateManager.Credentials;
             if (!CredentialsCheck(credentials, parseResult))
                 return 1;
@@ -36,7 +45,7 @@ public class Remove
                 return 1;
 
             AnsiConsole.MarkupLineInterpolated($"Removing {credentialToDelete.Markup()}");
-            await RemoveCredentialByTypeAsync(tracebitClient, credentialToDelete, cancellationToken);
+            await RemoveCredentialByTypeAsync(tracebitClient, credentialToDelete, force, cancellationToken);
             AnsiConsole.MarkupLineInterpolated($"[green]Credential {credentialToDelete.Markup()} removed[/]");
             return 0;
         });
@@ -50,6 +59,8 @@ public class Remove
         command.SetAction(async (parseResult, cancellationToken) =>
         {
             var tracebitClient = services.GetRequiredService<TracebitClient>();
+            var force = parseResult.GetRequiredValue(ForceOption);
+
             var awsCredentials = StateManager.AwsCredentials;
             if (!CredentialsCheck(awsCredentials, parseResult))
                 return 1;
@@ -59,7 +70,7 @@ public class Remove
                 return 1;
 
             AnsiConsole.MarkupLineInterpolated($"Removing {credentialToDelete.Markup()}");
-            await RemoveAwsCredentialAsync(tracebitClient, credentialToDelete, cancellationToken);
+            await RemoveAwsCredentialAsync(tracebitClient, credentialToDelete, force, cancellationToken);
             AnsiConsole.MarkupLineInterpolated($"[green]Credential {credentialToDelete.Markup()} removed[/]");
             AnsiConsole.MarkupLineInterpolated($"[yellow]AWS credentials can still be used via the AWS CLI to assume a role but that activity won't be monitored by Tracebit[/]");
 
@@ -75,6 +86,8 @@ public class Remove
         command.SetAction(async (parseResult, cancellationToken) =>
         {
             var tracebitClient = services.GetRequiredService<TracebitClient>();
+            var force = parseResult.GetRequiredValue(ForceOption);
+
             var sshCredentials = StateManager.SshCredentials;
             if (!CredentialsCheck(sshCredentials, parseResult))
                 return 1;
@@ -84,7 +97,7 @@ public class Remove
                 return 1;
 
             AnsiConsole.MarkupLineInterpolated($"Removing {credentialToDelete.Markup()}");
-            await RemoveSshCredentialAsync(tracebitClient, credentialToDelete, cancellationToken);
+            await RemoveSshCredentialAsync(tracebitClient, credentialToDelete, force, cancellationToken);
             AnsiConsole.MarkupLineInterpolated($"[green]Credential {credentialToDelete.Markup()} removed[/]");
 
             return 0;
@@ -99,6 +112,8 @@ public class Remove
         command.SetAction(async (parseResult, cancellationToken) =>
         {
             var tracebitClient = services.GetRequiredService<TracebitClient>();
+            var force = parseResult.GetRequiredValue(ForceOption);
+
             var credentials = StateManager.Credentials;
             if (!CredentialsCheck(credentials, parseResult))
                 return 1;
@@ -106,8 +121,21 @@ public class Remove
             foreach (var credentialToDelete in credentials)
             {
                 AnsiConsole.MarkupLineInterpolated($"Removing {credentialToDelete.Markup()}");
-                if (await RemoveCredentialByTypeAsync(tracebitClient, credentialToDelete, cancellationToken))
-                    AnsiConsole.MarkupLineInterpolated($"[green]:check_mark_button: Credential {credentialToDelete.Markup()} removed[/]\n");
+                try
+                {
+                    if (await RemoveCredentialByTypeAsync(tracebitClient, credentialToDelete, force, cancellationToken))
+                    {
+                        AnsiConsole.MarkupLineInterpolated($"[green]:check_mark_button: Credential {credentialToDelete.Markup()} removed[/]\n");
+                    }
+                    else
+                    {
+                        AnsiConsole.MarkupLineInterpolated($"[red]:cross_mark: Removal of {credentialToDelete.Markup()} cancelled[/]\n");
+                    }
+                }
+                catch (HttpRequestException)
+                {
+                    AnsiConsole.MarkupLineInterpolated($"[red]:cross_mark: Credential {credentialToDelete.Markup()} not removed due to a network error[/]\n");
+                }
             }
 
             return 0;
@@ -121,6 +149,8 @@ public class Remove
         command.SetAction(async (parseResult, cancellationToken) =>
         {
             var tracebitClient = services.GetRequiredService<TracebitClient>();
+            var force = parseResult.GetRequiredValue(ForceOption);
+
             var cookieCredentials = StateManager.BrowserCookieCredentials;
             if (!CredentialsCheck(cookieCredentials, parseResult))
                 return 1;
@@ -130,7 +160,7 @@ public class Remove
                 return 1;
 
             AnsiConsole.MarkupLineInterpolated($"Removing {credentialToDelete.Markup()}");
-            if (await RemoveBrowserCookieCredentialAsync(tracebitClient, credentialToDelete, cancellationToken))
+            if (await RemoveBrowserCookieCredentialAsync(tracebitClient, credentialToDelete, force, cancellationToken))
             {
                 AnsiConsole.MarkupLineInterpolated($"[green]Credential {credentialToDelete.Markup()} removed[/]");
                 return 0;
@@ -147,6 +177,8 @@ public class Remove
         command.SetAction(async (parseResult, cancellationToken) =>
         {
             var tracebitClient = services.GetRequiredService<TracebitClient>();
+            var force = parseResult.GetRequiredValue(ForceOption);
+
             var usernamePasswordCanaries = StateManager.UsernamePasswordCanaries;
             if (!CredentialsCheck(usernamePasswordCanaries, parseResult))
                 return 1;
@@ -156,7 +188,7 @@ public class Remove
                 return 1;
 
             AnsiConsole.MarkupLineInterpolated($"Removing {credentialToDelete.Markup()}");
-            if (await RemoveUsernamePasswordCanaryAsync(tracebitClient, credentialToDelete, cancellationToken))
+            if (await RemoveUsernamePasswordCanaryAsync(tracebitClient, credentialToDelete, force, cancellationToken))
             {
                 AnsiConsole.MarkupLineInterpolated($"[green]Credential {credentialToDelete.Markup()} removed[/]");
                 return 0;
@@ -173,6 +205,8 @@ public class Remove
         command.SetAction(async (parseResult, cancellationToken) =>
         {
             var tracebitClient = services.GetRequiredService<TracebitClient>();
+            var force = parseResult.GetRequiredValue(ForceOption);
+
             var emailCanaries = StateManager.EmailCanaries;
             if (!CredentialsCheck(emailCanaries, parseResult))
                 return 1;
@@ -182,7 +216,7 @@ public class Remove
                 return 1;
 
             AnsiConsole.MarkupLineInterpolated($"Removing {credentialToDelete.Markup()}");
-            await RemoveEmailCanaryAsync(tracebitClient, credentialToDelete, cancellationToken);
+            await RemoveEmailCanaryAsync(tracebitClient, credentialToDelete, force, cancellationToken);
             AnsiConsole.MarkupLineInterpolated($"[green]Credential {credentialToDelete.Markup()} removed[/]");
 
             return 0;
@@ -190,31 +224,38 @@ public class Remove
         return command;
     }
 
-    private static async Task RemoveAwsCredentialAsync(TracebitClient tracebitClient, AwsCredentialData awsCredential, CancellationToken cancellationToken)
+    private static async Task RemoveAwsCredentialAsync(TracebitClient tracebitClient, AwsCredentialData awsCredential, bool force, CancellationToken cancellationToken)
     {
         if (awsCredential.AwsProfile is null)
             throw new Exception("AWS Profile is null, canary cannot be removed");
 
+        await ExecuteWithForceErrorSuppression(() =>
+            tracebitClient.RemoveAsync(awsCredential.Name, awsCredential.TypeName, cancellationToken),
+            force
+        );
+
         await Deployer.RemoveAwsCredential(awsCredential.AwsProfile, cancellationToken);
 
-        await tracebitClient.RemoveAsync(awsCredential.Name, awsCredential.TypeName, cancellationToken);
-
         StateManager.RemoveCredential(awsCredential);
+
     }
 
-    private static async Task RemoveSshCredentialAsync(TracebitClient tracebitClient, SshCredentialData sshCredential, CancellationToken cancellationToken)
+    private static async Task RemoveSshCredentialAsync(TracebitClient tracebitClient, SshCredentialData sshCredential, bool force, CancellationToken cancellationToken)
     {
         if (sshCredential.Target is null)
             throw new Exception("SSH IP is null, canary cannot be removed");
 
-        await Deployer.RemoveSshCredential(sshCredential.Target, sshCredential.Path, cancellationToken);
+        await ExecuteWithForceErrorSuppression(() =>
+            tracebitClient.RemoveAsync(sshCredential.Name, sshCredential.TypeName, cancellationToken),
+            force
+        );
 
-        await tracebitClient.RemoveAsync(sshCredential.Name, sshCredential.TypeName, cancellationToken);
+        await Deployer.RemoveSshCredential(sshCredential.Target, sshCredential.Path, cancellationToken);
 
         StateManager.RemoveCredential(sshCredential);
     }
 
-    private static async Task<bool> RemoveBrowserCookieCredentialAsync(TracebitClient tracebitClient, GitlabCookieCredentialData cookieCredential, CancellationToken cancellationToken)
+    private static async Task<bool> RemoveBrowserCookieCredentialAsync(TracebitClient tracebitClient, GitlabCookieCredentialData cookieCredential, bool force, CancellationToken cancellationToken)
     {
         AnsiConsole.WriteLine($"To remove the cookie from your browser, clear site data for the domain {cookieCredential.Target}");
         var remove = await AnsiConsole.PromptAsync(new ConfirmationPrompt($"Remove {cookieCredential.Markup()} from credentials state?"), cancellationToken);
@@ -222,14 +263,17 @@ public class Remove
         if (!remove)
             return false;
 
-        await tracebitClient.RemoveAsync(cookieCredential.Name, cookieCredential.TypeName, cancellationToken);
+        await ExecuteWithForceErrorSuppression(() =>
+            tracebitClient.RemoveAsync(cookieCredential.Name, cookieCredential.TypeName, cancellationToken),
+            force
+        );
 
         StateManager.RemoveCredential(cookieCredential);
 
         return true;
     }
 
-    private static async Task<bool> RemoveUsernamePasswordCanaryAsync(TracebitClient tracebitClient, GitlabUsernamePasswordCredentialData usernamePasswordCanary, CancellationToken cancellationToken)
+    private static async Task<bool> RemoveUsernamePasswordCanaryAsync(TracebitClient tracebitClient, GitlabUsernamePasswordCredentialData usernamePasswordCanary, bool force, CancellationToken cancellationToken)
     {
         AnsiConsole.MarkupLineInterpolated($"To remove the [darkgoldenrod]username/password[/] canary from your password manager, delete the login for the domain [blue]'{usernamePasswordCanary.Target}'[/]");
         var remove = await AnsiConsole.PromptAsync(new ConfirmationPrompt($"Remove {usernamePasswordCanary.Markup()} from credentials state?"), cancellationToken);
@@ -240,16 +284,22 @@ public class Remove
             return false;
         }
 
-        await tracebitClient.RemoveAsync(usernamePasswordCanary.Name, usernamePasswordCanary.TypeName, cancellationToken);
+        await ExecuteWithForceErrorSuppression(() =>
+            tracebitClient.RemoveAsync(usernamePasswordCanary.Name, usernamePasswordCanary.TypeName, cancellationToken),
+            force
+        );
 
         StateManager.RemoveCredential(usernamePasswordCanary);
 
         return true;
     }
 
-    private static async Task<bool> RemoveEmailCanaryAsync(TracebitClient tracebitClient, EmailCredentialData emailCanary, CancellationToken cancellationToken)
+    private static async Task<bool> RemoveEmailCanaryAsync(TracebitClient tracebitClient, EmailCredentialData emailCanary, bool force, CancellationToken cancellationToken)
     {
-        await tracebitClient.RemoveAsync(emailCanary.Name, emailCanary.TypeName, cancellationToken);
+        await ExecuteWithForceErrorSuppression(() =>
+            tracebitClient.RemoveAsync(emailCanary.Name, emailCanary.TypeName, cancellationToken),
+            force
+        );
 
         AnsiConsole.MarkupLine("[darkgoldenrod]Email[/] canary will no longer raise alerts. You can remove it from your inbox:");
         AnsiConsole.MarkupLineInterpolated($"[darkgoldenrod]Sender:[/] {emailCanary.EmailFrom}");
@@ -263,7 +313,7 @@ public class Remove
     {
         var choice = await AnsiConsole.PromptAsync(
             Utils.SelectCredentialPrompt(credentials)
-            .Title($"Select a credential to remove:"),
+            .Title("Select a credential to remove:"),
             cancellationToken
         );
         return choice.Value;
@@ -289,24 +339,37 @@ public class Remove
         return true;
     }
 
-    private static async Task<bool> RemoveCredentialByTypeAsync(TracebitClient tracebitClient, CredentialData credentialToDelete, CancellationToken cancellationToken)
+    private static async Task<bool> RemoveCredentialByTypeAsync(TracebitClient tracebitClient, CredentialData credentialToDelete, bool force, CancellationToken cancellationToken)
     {
         switch (credentialToDelete)
         {
             case AwsCredentialData aws:
-                await RemoveAwsCredentialAsync(tracebitClient, aws, cancellationToken);
+                await RemoveAwsCredentialAsync(tracebitClient, aws, force, cancellationToken);
                 return true;
             case SshCredentialData ssh:
-                await RemoveSshCredentialAsync(tracebitClient, ssh, cancellationToken);
+                await RemoveSshCredentialAsync(tracebitClient, ssh, force, cancellationToken);
                 return true;
             case GitlabCookieCredentialData cookie:
-                return await RemoveBrowserCookieCredentialAsync(tracebitClient, cookie, cancellationToken);
+                return await RemoveBrowserCookieCredentialAsync(tracebitClient, cookie, force, cancellationToken);
             case GitlabUsernamePasswordCredentialData userPass:
-                return await RemoveUsernamePasswordCanaryAsync(tracebitClient, userPass, cancellationToken);
+                return await RemoveUsernamePasswordCanaryAsync(tracebitClient, userPass, force, cancellationToken);
             case EmailCredentialData email:
-                return await RemoveEmailCanaryAsync(tracebitClient, email, cancellationToken);
+                return await RemoveEmailCanaryAsync(tracebitClient, email, force, cancellationToken);
             default:
                 throw new NotImplementedException($"Removal is not yet supported for {credentialToDelete.PrettyTypeNameInstance} credentials");
+        }
+    }
+
+    private static async Task ExecuteWithForceErrorSuppression(Func<Task> operation, bool force)
+    {
+        try
+        {
+            await operation();
+        }
+        catch (HttpRequestException e) when (force)
+        {
+            var reason = e.StatusCode is not null ? e.StatusCode.Value.ToString() : "Http failure";
+            Utils.PrintCanaryRemovalFailedUsingForce(reason);
         }
     }
 }
