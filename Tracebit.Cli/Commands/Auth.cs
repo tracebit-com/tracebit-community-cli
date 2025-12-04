@@ -12,6 +12,7 @@ using Spectre.Console;
 
 using Tracebit.Cli.API;
 using Tracebit.Cli.Config;
+using Tracebit.Cli.Extensions;
 using Tracebit.Cli.State;
 
 namespace Tracebit.Cli.Commands;
@@ -21,7 +22,6 @@ static class Auth
     private static readonly Uri OAuthListenerBaseUri = new("http://localhost:5442");
     private const string OAuthCallbackPath = "/callback/";
     private static readonly Uri OAuthCallbackUri = new(OAuthListenerBaseUri, OAuthCallbackPath);
-    private static readonly Uri OAuthSuccessUri = new(OAuthListenerBaseUri, "/success/");
 
     public static JwtSecurityTokenHandler TokenHandler = new();
     public static TokenValidationParameters TokenValidationParameters = new()
@@ -104,7 +104,11 @@ static class Auth
         }
         else
         {
-            token = await FetchTokenWithBrowserAuthAsync(cancellationToken);
+            token = await FetchTokenWithBrowserAuthAsync(
+                parseResult.GetRequiredValue(GlobalOptions.ErrorDetail),
+                parseResult.GetRequiredValue(GlobalOptions.Stacktrace),
+                cancellationToken
+            );
         }
 
         var credentialsFile = Credentials.File();
@@ -197,65 +201,131 @@ static class Auth
         return credentials;
     }
 
-    private static async Task<string> FetchTokenWithBrowserAuthAsync(CancellationToken cancellationToken)
+    private static async Task<string> FetchTokenWithBrowserAuthAsync(bool errorDetail, bool stacktrace, CancellationToken cancellationToken)
     {
         using var listener = new HttpListener();
         listener.Prefixes.Add(OAuthCallbackUri.ToString());
-        listener.Prefixes.Add(OAuthSuccessUri.ToString());
         listener.Start();
 
         var cliLoginUrl = new Uri(Constants.TracebitUrl, "/cli-login");
+        string successResponseText = $"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <script>
+                    window.close();
+                    // Check theming, see https://tailwindcss.com/docs/dark-mode#with-system-theme-support
+                    document.documentElement.classList.toggle(
+                        "dark",
+                        localStorage.getItem('color-theme') === "dark",
+                    );
+                    document.documentElement.classList.toggle(
+                        "light",
+                        localStorage.getItem('color-theme') === "light",
+                    );
+                </script>
+                <title>Tracebit CLI Login Succeeded</title>
+                <link href="{new Uri(Constants.TracebitUrl, "css/output.css")}" rel="stylesheet">
+            </head>
+            <body class="text-black bg-gray-50 dark:text-gray-400 dark:bg-gray-900 grow min-h-screen flex flex-col items-center justify-center gap-12">
+                <div class="flex flex-row items-center p-2 gap-1"><img class="h-10 w-10 mr-2" src="{new Uri(Constants.TracebitUrl, "images/logo.png")}" alt="Tracebit">
+                    <span class="whitespace-nowrap font-logo text-black dark:text-white text-3xl">tracebit</span>
+                </div>
+                <div class="w-full max-w-xl bg-gradient-to-br bg-gradient-to-b from-grad-lightStart to-grad-lightEnd dark:from-gray-800 dark:to-gray-800 rounded-xl p-6 shadow-inset-border-light-low-opacity-half dark:shadow-inset-border-dark-low-opacity-half">
+                    <h1 class="text-xl font-medium text-base-light-8 dark:text-base-dark-8 mb-2">
+                        Tracebit CLI Login Succeeded
+                    </h1>
+                    <p class="text-body text-base-light-6 dark:text-base-dark-6 mb-4">
+                        You may now close this page
+                    </p>
+                </div>
+            </body>
+            </html>
+            """;
+        var successResponseBuffer = System.Text.Encoding.UTF8.GetBytes(successResponseText);
+        string exchangeErrorResponseText = $"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <script>
+                    // Check theming, see https://tailwindcss.com/docs/dark-mode#with-system-theme-support
+                    document.documentElement.classList.toggle(
+                        "dark",
+                        localStorage.getItem('color-theme') === "dark",
+                    );
+                    document.documentElement.classList.toggle(
+                        "light",
+                        localStorage.getItem('color-theme') === "light",
+                    );
+                </script>
+                <title>Tracebit CLI Login Error</title>
+                <link href="{new Uri(Constants.TracebitUrl, "css/output.css")}" rel="stylesheet">
+            </head>
+            <body class="text-black bg-gray-50 dark:text-gray-400 dark:bg-gray-900 grow min-h-screen flex flex-col items-center justify-center gap-12">
+                <div class="flex flex-row items-center p-2 gap-1"><img class="h-10 w-10 mr-2" src="{new Uri(Constants.TracebitUrl, "images/logo.png")}" alt="Tracebit">
+                    <span class="whitespace-nowrap font-logo text-black dark:text-white text-3xl">tracebit</span>
+                </div>
+                <div class="w-full max-w-xl bg-gradient-to-br bg-gradient-to-b from-grad-lightStart to-grad-lightEnd dark:from-gray-800 dark:to-gray-800 rounded-xl p-6 shadow-inset-border-light-low-opacity-half dark:shadow-inset-border-dark-low-opacity-half">
+                    <h1 class="text-xl font-medium text-base-light-8 dark:text-base-dark-8 mb-2">
+                        Tracebit CLI Login Error
+                    </h1>
+                    <p class="text-body text-base-light-6 dark:text-base-dark-6 mb-4">
+                        Something went wrong during Tracebit CLI login
+                    </p>
+                    <div class="w-full flex justify-center">
+                        <a class="inline-flex items-center px-2 h-7 gap-1.5 text-body font-medium leading-none transition-all duration-300 ease-in-out rounded-md text-brand-light-9 dark:text-brand-dark-9 bg-brand-light-2 dark:bg-brand-dark-2 hover:bg-brand-light-3 dark:hover:bg-brand-dark-3 active:bg-brand-light-2 dark:active:bg-brand-dark-2" href="{cliLoginUrl}">Retry</a>
+                    </div>
+                </div>
+            </body>
+            </html>
+            """;
+        var exchangeErrorResponseBuffer = System.Text.Encoding.UTF8.GetBytes(exchangeErrorResponseText);
+
         try
         {
             Process.Start(new ProcessStartInfo { FileName = cliLoginUrl.ToString(), UseShellExecute = true });
-            AnsiConsole.MarkupLineInterpolated($"Opening {cliLoginUrl} in your browser");
+            AnsiConsole.MarkupLineInterpolated($"Opening [blue link]{cliLoginUrl}[/] in your browser");
         }
         catch
         {
             AnsiConsole.MarkupLineInterpolated($"Open {cliLoginUrl} in your browser on this device to continue");
         }
 
-        string? token = null;
-        while (token is null)
+        string? longLivedToken = null;
+        while (longLivedToken is null)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var ctx = await listener.GetContextAsync().WaitAsync(cancellationToken);
+            var ctx = await AnsiConsole.Status().DefaultSpinner().StartAsync("Waiting for authorization...", async _ => await listener.GetContextAsync().WaitAsync(cancellationToken));
             using var response = ctx.Response;
-            token = ctx.Request.QueryString["token"];
+            var token = ctx.Request.QueryString["token"];
             if (ctx.Request.Url is not null
                 && ctx.Request.Url.AbsolutePath.StartsWith(OAuthCallbackPath)
                 && !string.IsNullOrEmpty(token))
             {
-                response.RedirectLocation = OAuthSuccessUri.ToString();
-                response.StatusCode = (int)HttpStatusCode.Redirect;
+                try
+                {
+                    longLivedToken = await AnsiConsole.Status().DefaultSpinner().StartAsync("Exchanging token...", async _ =>
+                    {
+                        await Task.Delay(1000);
+                        return await ExchangeApiToken(token, cancellationToken);
+                    });
+                    response.StatusCode = (int)HttpStatusCode.OK;
+                    await response.OutputStream.WriteAsync(successResponseBuffer, cancellationToken);
+                }
+                catch (Exception e)
+                {
+                    AnsiConsole.Console.WritePrettyException(new Exception($"Failed to exchange API token for a long-lived token: {e.Message}", e), errorDetail, stacktrace);
+                    response.StatusCode = (int)HttpStatusCode.OK;
+                    await response.OutputStream.WriteAsync(exchangeErrorResponseBuffer, cancellationToken);
+                }
             }
             else
             {
                 response.StatusCode = (int)HttpStatusCode.BadRequest;
             }
+
+            await response.OutputStream.FlushAsync(cancellationToken);
         }
-
-        var longLivedToken = await ExchangeApiToken(token, cancellationToken);
-
-        var successCtx = await listener.GetContextAsync().WaitAsync(cancellationToken);
-        using var successResponse = successCtx.Response;
-        successResponse.StatusCode = (int)HttpStatusCode.OK;
-        const string successResponseText = """
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <script>window.close()</script>
-                <title>Tracebit CLI Login</title>
-            </head>
-            <body>
-                <h1>Tracebit CLI Login Succeeded</h1>
-                <p>You may now close this page</p>
-            </body>
-            </html>
-            """;
-        var successResponseBuffer = System.Text.Encoding.UTF8.GetBytes(successResponseText);
-        await successResponse.OutputStream.WriteAsync(successResponseBuffer, cancellationToken);
-        await successResponse.OutputStream.FlushAsync(cancellationToken);
 
         return longLivedToken;
     }
