@@ -257,11 +257,14 @@ public class Remove
 
     private static async Task<bool> RemoveBrowserCookieCredentialAsync(TracebitClient tracebitClient, GitlabCookieCredentialData cookieCredential, bool force, CancellationToken cancellationToken)
     {
-        AnsiConsole.WriteLine($"To remove the cookie from your browser, clear site data for the domain {cookieCredential.Target}");
-        var remove = await AnsiConsole.PromptAsync(new ConfirmationPrompt($"Remove {cookieCredential.Markup()} from credentials state?"), cancellationToken);
+        if (!force)
+        {
+            AnsiConsole.WriteLine($"To remove the cookie from your browser, clear site data for the domain {cookieCredential.Target}");
+            var remove = await AnsiConsole.PromptAsync(new ConfirmationPrompt($"Remove {cookieCredential.Markup()} from credentials state?"), cancellationToken);
 
-        if (!remove)
-            return false;
+            if (!remove)
+                return false;
+        }
 
         await ExecuteWithForceErrorSuppression(() =>
             tracebitClient.RemoveAsync(cookieCredential.Name, cookieCredential.TypeName, cancellationToken),
@@ -273,15 +276,18 @@ public class Remove
         return true;
     }
 
-    private static async Task<bool> RemoveUsernamePasswordCanaryAsync(TracebitClient tracebitClient, GitlabUsernamePasswordCredentialData usernamePasswordCanary, bool force, CancellationToken cancellationToken)
+    public static async Task<bool> RemoveUsernamePasswordCanaryAsync(TracebitClient tracebitClient, GitlabUsernamePasswordCredentialData usernamePasswordCanary, bool force, CancellationToken cancellationToken)
     {
-        AnsiConsole.MarkupLineInterpolated($"To remove the [darkgoldenrod]username/password[/] canary from your password manager, delete the login for the domain [blue]'{usernamePasswordCanary.Target}'[/]");
-        var remove = await AnsiConsole.PromptAsync(new ConfirmationPrompt($"Remove {usernamePasswordCanary.Markup()} from credentials state?"), cancellationToken);
-
-        if (!remove)
+        if (!force)
         {
-            AnsiConsole.MarkupLine("[red]Username/password canary not removed[/]");
-            return false;
+            AnsiConsole.MarkupLineInterpolated($"To remove the [darkgoldenrod]username/password[/] canary from your password manager, delete the login for the domain [blue]'{usernamePasswordCanary.Target}'[/]");
+            var remove = await AnsiConsole.PromptAsync(new ConfirmationPrompt($"Remove {usernamePasswordCanary.Markup()} from credentials state?"), cancellationToken);
+
+            if (!remove)
+            {
+                AnsiConsole.MarkupLine("[red]Username/password canary not removed[/]");
+                return false;
+            }
         }
 
         await ExecuteWithForceErrorSuppression(() =>

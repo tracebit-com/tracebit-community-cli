@@ -24,6 +24,12 @@ static partial class Utils
         throw new NotImplementedException();
     }
 
+    // Used by background tasks to send errors to standard out
+    public static readonly IAnsiConsole ErrorConsole = AnsiConsole.Create(new AnsiConsoleSettings
+    {
+        Out = new AnsiConsoleOutput(Console.Error)
+    });
+
     public static string GenerateRandomString(int length)
     {
         const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
@@ -159,9 +165,9 @@ static partial class Utils
             var latestVersion = SemanticVersion.Parse(response.TagName);
             // Release `Prerelease` value is based on the semver, but check both in case we have manually overridden it in the release
             if (!response.Prerelease && !latestVersion.IsPrerelease && GetCurrentVersion() < latestVersion)
-                AnsiConsole.MarkupLineInterpolated($"[yellow]A new version of the Tracebit CLI is available\nUpgrade to the latest version ({response.TagName}) at [blue link]{response.HtmlUrl}[/][/]");
+                ErrorConsole.MarkupLineInterpolated($"[yellow]A new version of the Tracebit CLI is available\nUpgrade to the latest version ({response.TagName}) at [blue link]{response.HtmlUrl}[/][/]");
             else if (parseResult.GetRequiredValue(GlobalOptions.Verbose))
-                AnsiConsole.WriteLine($"Tracebit CLI is up to date: currently {GetCurrentVersion()}, latest release is {latestVersion}");
+                ErrorConsole.WriteLine($"Tracebit CLI is up to date: currently {GetCurrentVersion()}, latest release is {latestVersion}");
         }
         catch (Exception e)
         {
@@ -170,7 +176,7 @@ static partial class Utils
             {
                 var errorDetail = parseResult.GetRequiredValue(GlobalOptions.ErrorDetail);
                 var stacktrace = parseResult.GetRequiredValue(GlobalOptions.Stacktrace);
-                AnsiConsole.Console.WritePrettyException(new Exception("Failed to get latest release", e), errorDetail, stacktrace);
+                ErrorConsole.WritePrettyException(new Exception("Failed to get latest release", e), errorDetail, stacktrace);
             }
         }
     }
@@ -187,7 +193,7 @@ static partial class Utils
             {
                 var errorDetail = parseResult.GetRequiredValue(GlobalOptions.ErrorDetail);
                 var stacktrace = parseResult.GetRequiredValue(GlobalOptions.Stacktrace);
-                AnsiConsole.Console.WritePrettyException(new Exception("Failed to update status", e), errorDetail, stacktrace);
+                ErrorConsole.WritePrettyException(new Exception("Failed to update status", e), errorDetail, stacktrace);
             }
         }
     }
@@ -232,3 +238,14 @@ public class EmailCredentialAlreadyExistsException(ParseResult parseResult, Cred
         $"[red]Credential {existingCanary.Markup()} already exists.\nRemove the existing canary with [purple]{parseResult.RootCommandResult.IdentifierToken} {Remove.BaseCommand.Name}[/].[/]");
 
 public record OptionalSelection<T>(T? Value);
+
+public static class YesNoNoDefaultPrompt
+{
+    public const char Yes = 'y';
+    private const char No = 'n';
+
+    public static readonly TextPrompt<char> Prompt = new TextPrompt<char>("Have you saved this in your password manager?")
+        .ShowChoices(true)
+        .AddChoice(Yes)
+        .AddChoice(No);
+}

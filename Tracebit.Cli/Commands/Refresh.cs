@@ -176,7 +176,7 @@ public class Refresh
             return;
         }
 
-        await Deploy.DeployUsernamePasswordAsync(newCredential, tracebitClient, verbose, cancellationToken);
+        await Deploy.DeployUsernamePasswordAsync(newCredential, tracebitClient, verbose, jsonOutput: false, cancellationToken);
         StateManager.AddUsernamePasswordCredential(credential.Name, credential.Labels, newCredential);
     }
 

@@ -59,11 +59,6 @@ public class Program
         var parseResult = rootCommand.Parse(args);
         parseResult.InvocationConfiguration.EnableDefaultExceptionHandler = false;
 
-        var beforeShutdown = Task.WhenAll(
-            Commands.Utils.ReportUpdateStatusFailures(parseResult, updateStatus),
-            Commands.Utils.NotifyForUpdatesAsync(parseResult, getLatestCliRelease)
-        );
-
         var exitCode = 1;
         try
         {
@@ -80,8 +75,14 @@ public class Program
                 parseResult.GetRequiredValue(Commands.GlobalOptions.Stacktrace));
         }
 
-        var completedTask = await Task.WhenAny([beforeShutdown, Task.Delay(1000, CancellationToken.None)]);
-        await completedTask;
+        await Task.WhenAny(
+            Commands.Utils.ReportUpdateStatusFailures(parseResult, updateStatus),
+            Task.Delay(1000, CancellationToken.None)
+        );
+        await Task.WhenAny(
+            Commands.Utils.NotifyForUpdatesAsync(parseResult, getLatestCliRelease),
+            Task.Delay(1000, CancellationToken.None)
+        );
 
         return exitCode;
     }

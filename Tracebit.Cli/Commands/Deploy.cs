@@ -64,6 +64,12 @@ static class Deploy
         Description = "The name of the local SSH key file"
     };
 
+    public static readonly Option<bool> JsonOutputOption = new("--json-output")
+    {
+        Description = "Return the output in json format",
+        DefaultValueFactory = _ => false
+    };
+
     public static Command Command(IServiceProvider services)
     {
         ConfigureAwsProfileValidation();
@@ -267,14 +273,22 @@ static class Deploy
                     {
                         AnsiConsole.MarkupLine("Deploying [darkgoldenrod]username/password[/] credentials");
                         await AnsiConsole.Status().DefaultSpinner().StartAsync("Deploying...", async _ => await Task.WhenAll(
-                            DeployUsernamePasswordAsync(usernamePasswordCredentials, tracebitClient, verbose, cancellationToken),
+                            DeployUsernamePasswordAsync(usernamePasswordCredentials, tracebitClient, verbose, jsonOutput: false, cancellationToken),
                             Task.Delay(400, cancellationToken)
                         ));
                         var deployedCredential = StateManager.AddUsernamePasswordCredential(name, labels, usernamePasswordCredentials);
                         deployedCredentials.Add(deployedCredential);
 
-                        await AnsiConsole.PromptAsync(new ConfirmationPrompt("Have you saved this in your password manager?") { DefaultValue = false }, cancellationToken);
-                        Utils.PrintCanaryCredentialSuccessfullyDeployedMessage(deployedCredential);
+                        if (await AnsiConsole.PromptAsync(YesNoNoDefaultPrompt.Prompt, cancellationToken) == YesNoNoDefaultPrompt.Yes)
+                        {
+                            Utils.PrintCanaryCredentialSuccessfullyDeployedMessage(deployedCredential);
+                        }
+                        else
+                        {
+                            await Remove.RemoveUsernamePasswordCanaryAsync(tracebitClient, deployedCredential, force: true, cancellationToken);
+                            StateManager.RemoveCredential(deployedCredential);
+                            AnsiConsole.MarkupLineInterpolated($"[red]:cross_mark: Credential {deployedCredential.Markup()} not deployed and marked as expired on Tracebit[/]\n");
+                        }
                     }
                 }
             }
@@ -373,12 +387,14 @@ static class Deploy
     private static Command DeployUsernamePasswordCommand(IServiceProvider services)
     {
         var command = DeployCanaryCredentialsCommand("username-password", "Deploy username/password canary");
+        command.Add(JsonOutputOption);
 
         command.SetAction(async (parseResult, cancellationToken) =>
         {
             var name = parseResult.GetRequiredValue(NameOption);
             var labels = parseResult.GetValue(LabelsOption);
             var verbose = parseResult.GetValue(GlobalOptions.Verbose);
+            var jsonOutput = parseResult.GetValue(JsonOutputOption);
 
             var interactive = parseResult.GetValue(GlobalOptions.Interactive);
             if (interactive)
@@ -390,17 +406,30 @@ static class Deploy
             StateManager.EnsureCredentialDoesNotExist<GitlabUsernamePasswordCredentialData>(name, parseResult, NameOption.Name);
 
             var tracebitClient = services.GetRequiredService<TracebitClient>();
-            var response = await AnsiConsole.Status().DefaultSpinner().StartAsync("Deploying...", async _ => await IssueCredentialsAsync(tracebitClient, name, canaryTypes: [Constants.GitlabUsernamePasswordInstanceId], labels, verbose));
+            var issueCredentialsTask = IssueCredentialsAsync(tracebitClient, name, canaryTypes: [Constants.GitlabUsernamePasswordInstanceId], labels, verbose);
+            if (!jsonOutput)
+                // ReSharper disable once AccessToModifiedClosure
+                issueCredentialsTask = AnsiConsole.Status().DefaultSpinner().StartAsync("Deploying...", async _ => await issueCredentialsTask);
+            var response = await issueCredentialsTask;
 
             if (response.Http is null || !response.Http.TryGetValue(Constants.GitlabUsernamePasswordInstanceId, out HttpCanaryCredentials? usernamePasswordCredentials))
                 throw new Exception("Username/password credentials were not found in issued credentials");
 
-            await DeployUsernamePasswordAsync(usernamePasswordCredentials, tracebitClient, verbose, cancellationToken);
+            await DeployUsernamePasswordAsync(usernamePasswordCredentials, tracebitClient, verbose, jsonOutput, cancellationToken);
             var deployedCredential = StateManager.AddUsernamePasswordCredential(name, labels, usernamePasswordCredentials);
 
-            if (await AnsiConsole.PromptAsync(new ConfirmationPrompt("Have you saved this in your password manager?") { DefaultValue = false }, cancellationToken))
+            if (jsonOutput)
+                return 0;
+
+            if (await AnsiConsole.PromptAsync(YesNoNoDefaultPrompt.Prompt, cancellationToken) == YesNoNoDefaultPrompt.Yes)
             {
                 Utils.PrintCanaryCredentialSuccessfullyDeployedMessage(deployedCredential);
+            }
+            else
+            {
+                await Remove.RemoveUsernamePasswordCanaryAsync(tracebitClient, deployedCredential, force: true, cancellationToken);
+                StateManager.RemoveCredential(deployedCredential);
+                AnsiConsole.MarkupLineInterpolated($"[red]:cross_mark: Credential {deployedCredential.Markup()} not deployed and marked as expired on Tracebit[/]\n");
             }
 
             return 0;
@@ -551,16 +580,32 @@ static class Deploy
             AnsiConsole.MarkupLine("Cookie credentials confirmed");
     }
 
-    public static async Task DeployUsernamePasswordAsync(HttpCanaryCredentials httpCanaryCredentials, TracebitClient tracebitClient, bool verbose, CancellationToken cancellationToken)
+    public static async Task DeployUsernamePasswordAsync(HttpCanaryCredentials httpCanaryCredentials, TracebitClient tracebitClient, bool verbose, bool jsonOutput, CancellationToken cancellationToken)
     {
         var usernamePassword = httpCanaryCredentials.Credentials.Deserialize(ApiJsonSerializerContext.Default.UsernamePasswordData);
         if (usernamePassword == null)
             throw new Exception("Username/password could not parsed from the response");
 
-        AnsiConsole.MarkupLineInterpolated(
-            $"To deploy the [darkgoldenrod]username/password[/] canary open your password manager and create a new login for domain [blue]'{httpCanaryCredentials.HostNames.First()}'[/] and insert:");
-        AnsiConsole.MarkupLineInterpolated($"[darkgoldenrod]Suggested password manager login name:[/] {Utils.GenerateRandomPasswordManagerLoginName()}");
-        AnsiConsole.MarkupLineInterpolated($"[darkgoldenrod]username:[/] {usernamePassword.Username}\n[darkgoldenrod]password:[/] {usernamePassword.Password}");
+        var suggestedName = Utils.GenerateRandomPasswordManagerLoginName();
+        if (jsonOutput)
+        {
+            AnsiConsole.MarkupLine(new UsernamePasswordOutput
+            {
+                Domain = httpCanaryCredentials.HostNames.First(),
+                SuggestedName = suggestedName,
+                Username = usernamePassword.Username,
+                Password = usernamePassword.Password,
+            }.Serialize()
+            );
+        }
+        else
+        {
+            AnsiConsole.MarkupLineInterpolated(
+                $"To deploy the [darkgoldenrod]username/password[/] canary open your password manager and create a new login for domain [blue]'{httpCanaryCredentials.HostNames.First()}'[/] and insert:");
+            AnsiConsole.MarkupLineInterpolated($"[darkgoldenrod]Suggested password manager login name:[/] {suggestedName}");
+            AnsiConsole.MarkupLineInterpolated($"[darkgoldenrod]username:[/] {usernamePassword.Username}\n[darkgoldenrod]password:[/] {usernamePassword.Password}");
+            AnsiConsole.MarkupLineInterpolated($"[italic gray]You can use '[purple]{Program.RootCommand().Name} {BaseCommand.Name} {DeployUsernamePasswordCommand(new ServiceCollection().BuildServiceProvider()).Name} {JsonOutputOption.Name}[/]' if you need the credentials in JSON form[/]");
+        }
 
         if (verbose)
             AnsiConsole.MarkupLine("Confirming username/password credentials");
