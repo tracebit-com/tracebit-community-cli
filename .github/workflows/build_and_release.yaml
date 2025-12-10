@@ -47,7 +47,6 @@ jobs:
     name: Release
     if: github.ref_type == 'tag'
     runs-on: ubuntu-latest
-    if: github.ref_type == 'tag'
     needs: build_cli
     steps:
     - uses: actions/download-artifact@v5
