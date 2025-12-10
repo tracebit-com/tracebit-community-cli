@@ -34,7 +34,7 @@ public class Remove
         BaseCommand.SetAction(async (parseResult, cancellationToken) =>
         {
             var tracebitClient = services.GetRequiredService<TracebitClient>();
-            var force = parseResult.GetRequiredValue(ForceOption);
+            var force = parseResult.GetValue(ForceOption);
 
             var credentials = StateManager.Credentials;
             if (!CredentialsCheck(credentials, parseResult))
@@ -59,7 +59,7 @@ public class Remove
         command.SetAction(async (parseResult, cancellationToken) =>
         {
             var tracebitClient = services.GetRequiredService<TracebitClient>();
-            var force = parseResult.GetRequiredValue(ForceOption);
+            var force = parseResult.GetValue(ForceOption);
 
             var awsCredentials = StateManager.AwsCredentials;
             if (!CredentialsCheck(awsCredentials, parseResult))
@@ -86,7 +86,7 @@ public class Remove
         command.SetAction(async (parseResult, cancellationToken) =>
         {
             var tracebitClient = services.GetRequiredService<TracebitClient>();
-            var force = parseResult.GetRequiredValue(ForceOption);
+            var force = parseResult.GetValue(ForceOption);
 
             var sshCredentials = StateManager.SshCredentials;
             if (!CredentialsCheck(sshCredentials, parseResult))
@@ -112,7 +112,7 @@ public class Remove
         command.SetAction(async (parseResult, cancellationToken) =>
         {
             var tracebitClient = services.GetRequiredService<TracebitClient>();
-            var force = parseResult.GetRequiredValue(ForceOption);
+            var force = parseResult.GetValue(ForceOption);
 
             var credentials = StateManager.Credentials;
             if (!CredentialsCheck(credentials, parseResult))
@@ -149,7 +149,7 @@ public class Remove
         command.SetAction(async (parseResult, cancellationToken) =>
         {
             var tracebitClient = services.GetRequiredService<TracebitClient>();
-            var force = parseResult.GetRequiredValue(ForceOption);
+            var force = parseResult.GetValue(ForceOption);
 
             var cookieCredentials = StateManager.BrowserCookieCredentials;
             if (!CredentialsCheck(cookieCredentials, parseResult))
@@ -177,7 +177,7 @@ public class Remove
         command.SetAction(async (parseResult, cancellationToken) =>
         {
             var tracebitClient = services.GetRequiredService<TracebitClient>();
-            var force = parseResult.GetRequiredValue(ForceOption);
+            var force = parseResult.GetValue(ForceOption);
 
             var usernamePasswordCanaries = StateManager.UsernamePasswordCanaries;
             if (!CredentialsCheck(usernamePasswordCanaries, parseResult))
@@ -205,7 +205,7 @@ public class Remove
         command.SetAction(async (parseResult, cancellationToken) =>
         {
             var tracebitClient = services.GetRequiredService<TracebitClient>();
-            var force = parseResult.GetRequiredValue(ForceOption);
+            var force = parseResult.GetValue(ForceOption);
 
             var emailCanaries = StateManager.EmailCanaries;
             if (!CredentialsCheck(emailCanaries, parseResult))
