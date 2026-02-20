@@ -5,6 +5,8 @@ The Tracebit Community CLI is the command-line tool for Tracebit Community Editi
 
 The CLI can be used to deploy AWS credentials, SSH keys, browser cookies, website passwords and emails with a single command.
 
+Alternatively, you can create an API token and use the [Tracebit API](https://community.tracebit.com/api-docs) to issue canaries programmatically.
+
 Start by creating a free Tracebit Community Edition account at [community.tracebit.com](https://community.tracebit.com), where you can view and monitor your deployed canaries.
 
 ## Getting Started
