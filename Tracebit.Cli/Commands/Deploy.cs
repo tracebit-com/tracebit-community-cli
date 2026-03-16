@@ -688,7 +688,6 @@ static class Deploy
         defaultName = defaultNameExists ? $"{defaultName}-{Utils.GenerateRandomString(5)}" : defaultName;
         var name = await AnsiConsole.PromptAsync(TextPrompts.NamePrompt(defaultName), cancellationToken);
         var labels = _labelsParsing(await AnsiConsole.PromptAsync(TextPrompts.LabelsPrompt, cancellationToken));
-        // NOTE: only does a whitespace check for now, not legal filename checks yet like how the option does AcceptLegalFileNamesOnly()
         var sshKeyFileName = await AnsiConsole.PromptAsync(TextPrompts.SshKeyFileNamePrompt(defaultSshKeyFileName), cancellationToken);
         AnsiConsole.WriteLine();
         return (name, labels, sshKeyFileName);

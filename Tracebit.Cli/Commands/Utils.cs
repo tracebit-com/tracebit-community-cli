@@ -131,6 +131,20 @@ static partial class Utils
         return LabelFormat().IsMatch(input);
     }
 
+    public static bool IsValidSshKeyFileName(string fileName)
+    {
+        if (string.IsNullOrEmpty(fileName))
+            return false;
+        if (fileName.Any(char.IsWhiteSpace))
+            return false;
+        if (fileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+            return false;
+        // Ensure it's a file name and not a path (check both separators regardless of platform)
+        if (fileName.Contains('/') || fileName.Contains('\\'))
+            return false;
+        return true;
+    }
+
     public static void PrintCanaryRemovalFailedUsingForce(string reason)
     {
         AnsiConsole.MarkupLineInterpolated(

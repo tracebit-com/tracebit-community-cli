@@ -48,7 +48,7 @@ public static class TextPrompts
             .DefaultValue(defaultSshKeyFileName)
             .DefaultValueStyle(Style.Parse("silver"))
             .Validate(s =>
-                s.Any(char.IsWhiteSpace)
-                    ? ValidationResult.Error("Whitespace in name not supported")
-                    : ValidationResult.Success());
+                Utils.IsValidSshKeyFileName(s)
+                    ? ValidationResult.Success()
+                    : ValidationResult.Error("Invalid SSH key file name: provide a file name (not a path) with no spaces or special characters"));
 }

@@ -98,4 +98,21 @@ public class UtilsTests
         Assert.NotNull(version);
         Assert.True(version.Major >= 0);
     }
+
+    [Theory]
+    [InlineData("tracebit-key.pem", true)]
+    [InlineData("my_ssh_key", true)]
+    [InlineData("key123", true)]
+    [InlineData("id_rsa", true)]
+    [InlineData("", false)]
+    [InlineData("key with spaces.pem", false)]
+    [InlineData("\tkey.pem", false)]
+    [InlineData("path/to/key.pem", false)]
+    [InlineData("path\\to\\key.pem", false)]
+    public void IsValidSshKeyFileName_ValidatesFileName(string input, bool expected)
+    {
+        var result = Utils.IsValidSshKeyFileName(input);
+
+        Assert.Equal(expected, result);
+    }
 }
