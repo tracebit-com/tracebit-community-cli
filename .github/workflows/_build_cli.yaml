@@ -60,9 +60,9 @@ jobs:
     environment: ${{ inputs.sign && 'production' || '' }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Setup .NET Core SDK
-        uses: actions/setup-dotnet@v3
+        uses: actions/setup-dotnet@v5
         with:
           global-json-file: ./global.json
       - name: Setup Java runtime
@@ -153,14 +153,14 @@ jobs:
           mv Build\tracebit-daemon.exe Build\tracebit-daemon-${{ matrix.targets.tag }}.exe
           mv Build\install-tracebit.msi Build\install-tracebit-${{ matrix.targets.tag }}.msi
       - name: Upload binary artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: tracebit-${{ matrix.targets.tag }}
           path: Build/tracebit*
           retention-days: 15
           if-no-files-found: error
       - name: Upload installer artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: install-tracebit-${{ matrix.targets.tag }}
           path: Build/install-tracebit*

@@ -16,9 +16,9 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v6
       - name: Setup .NET Core SDK
-        uses: actions/setup-dotnet@v3
+        uses: actions/setup-dotnet@v5
         with:
           global-json-file: ./global.json
       - name: Install tools
@@ -36,11 +36,11 @@ jobs:
       pull-requests: write
       checks: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - name: Setup .NET Core SDK
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           global-json-file: ./global.json
       - name: Install dependencies
@@ -48,8 +48,10 @@ jobs:
       - name: Install dependent tools
         run: dotnet tool restore
       - name: 'Qodana Scan'
-        uses: JetBrains/qodana-action@e5d20b1260e99a93210d46ec8882c83978a09036
+        # godana-action doesn't have a version that works with Node 24 yet:
+        # https://youtrack.jetbrains.com/issue/QD-14035/Github-Action-Node.js-20-actions-are-deprecated
+        uses: JetBrains/qodana-action@v2025.3.2
         with:
-          args: --baseline,qodana.sarif.json,--fail-threshold,0
+          args: --baseline qodana.sarif.json --fail-threshold 0
         env:
           QODANA_TOKEN: ${{ secrets.qodana-token }}
