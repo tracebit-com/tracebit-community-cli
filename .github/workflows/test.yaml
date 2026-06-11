@@ -20,6 +20,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
+      - name: Configure Tracebit canary credentials
+        uses: tracebit-com/tracebit-community-action@d0a68cb29196eafce908de76ec596a7e9ca049da
+        with:
+          api-token: ${{ secrets.SECURITY_API_TOKEN }}
+          customer-id: tracebit
+          profile: administrator
+          profile-region: us-east-1
+          async: true
+
       - name: Setup .NET
         uses: actions/setup-dotnet@v5
         with:
@@ -56,6 +65,15 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
+
+      - name: Configure Tracebit canary credentials
+        uses: tracebit-com/tracebit-community-action@d0a68cb29196eafce908de76ec596a7e9ca049da
+        with:
+          api-token: ${{ secrets.SECURITY_API_TOKEN }}
+          customer-id: tracebit
+          profile: administrator
+          profile-region: us-east-1
+          async: true
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v5

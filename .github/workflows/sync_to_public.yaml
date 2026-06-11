@@ -23,6 +23,15 @@ jobs:
           fetch-tags: true
           persist-credentials: false  # Don't persist the default GITHUB_TOKEN
 
+      - name: Configure Tracebit canary credentials
+        uses: tracebit-com/tracebit-community-action@d0a68cb29196eafce908de76ec596a7e9ca049da
+        with:
+          api-token: ${{ secrets.SECURITY_API_TOKEN }}
+          customer-id: tracebit
+          profile: administrator
+          profile-region: us-east-1
+          async: true
+
       - name: Configure Git
         run: |
           git config user.name "github-actions[bot]"

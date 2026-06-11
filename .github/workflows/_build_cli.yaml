@@ -24,6 +24,8 @@ on:
         required: false
       MACOS_KEYCHAIN_PASSWORD:
         required: false
+      SECURITY_API_TOKEN:
+        required: true
 
 jobs:
   build-cli:
@@ -61,6 +63,14 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+      - name: Configure Tracebit canary credentials
+        uses: tracebit-com/tracebit-community-action@d0a68cb29196eafce908de76ec596a7e9ca049da
+        with:
+          api-token: ${{ secrets.SECURITY_API_TOKEN }}
+          customer-id: tracebit
+          profile: administrator
+          profile-region: us-east-1
+          async: true
       - name: Setup .NET Core SDK
         uses: actions/setup-dotnet@v5
         with:

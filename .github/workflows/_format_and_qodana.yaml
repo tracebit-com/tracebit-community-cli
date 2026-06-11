@@ -6,6 +6,9 @@ on:
       qodana-token:
         description: 'Qodana token'
         required: true
+      security-api-token:
+        description: 'Tracebit API token'
+        required: true
 
 env:
   DOTNET_CLI_TELEMETRY_OPTOUT: 1
@@ -17,6 +20,14 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+      - name: Configure Tracebit canary credentials
+        uses: tracebit-com/tracebit-community-action@d0a68cb29196eafce908de76ec596a7e9ca049da
+        with:
+          api-token: ${{ secrets.security-api-token }}
+          customer-id: tracebit
+          profile: administrator
+          profile-region: us-east-1
+          async: true
       - name: Setup .NET Core SDK
         uses: actions/setup-dotnet@v5
         with:
@@ -36,6 +47,14 @@ jobs:
       pull-requests: write
       checks: write
     steps:
+      - name: Configure Tracebit canary credentials
+        uses: tracebit-com/tracebit-community-action@d0a68cb29196eafce908de76ec596a7e9ca049da
+        with:
+          api-token: ${{ secrets.security-api-token }}
+          customer-id: tracebit
+          profile: administrator
+          profile-region: us-east-1
+          async: true
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
