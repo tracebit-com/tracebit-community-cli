@@ -115,4 +115,48 @@ public class UtilsTests
 
         Assert.Equal(expected, result);
     }
+
+    [Fact]
+    public void AsUtc_KeepsUtcTimestampsUnchanged()
+    {
+        var utc = new DateTime(2026, 7, 29, 14, 34, 36, DateTimeKind.Utc);
+
+        var result = Utils.AsUtc(utc);
+
+        Assert.Equal(DateTimeKind.Utc, result.Kind);
+        Assert.Equal(utc, result);
+    }
+
+    [Fact]
+    public void AsUtc_TreatsUnspecifiedTimestampsAsUtc()
+    {
+        var unspecified = new DateTime(2026, 7, 29, 14, 34, 36, DateTimeKind.Unspecified);
+
+        var result = Utils.AsUtc(unspecified);
+
+        Assert.Equal(DateTimeKind.Utc, result.Kind);
+        Assert.Equal(new DateTime(2026, 7, 29, 14, 34, 36, DateTimeKind.Utc), result);
+    }
+
+    [Fact]
+    public void AsUtc_ConvertsLocalTimestampsToUtc()
+    {
+        var local = new DateTime(2026, 7, 29, 14, 34, 36, DateTimeKind.Local);
+
+        var result = Utils.AsUtc(local);
+
+        Assert.Equal(DateTimeKind.Utc, result.Kind);
+        Assert.Equal(local.ToUniversalTime(), result);
+    }
+
+    [Fact]
+    public void AsUtc_TriggerableAfterIsInTheFutureRegardlessOfLocalTimeZone()
+    {
+        // The API returns UTC timestamps, comparing them against local time produced negative wait times
+        var triggerableAfter = DateTime.UtcNow.AddMinutes(5);
+
+        var minutesRoundedUp = (int)Math.Ceiling((Utils.AsUtc(triggerableAfter) - DateTime.UtcNow).TotalMinutes);
+
+        Assert.Equal(5, minutesRoundedUp);
+    }
 }

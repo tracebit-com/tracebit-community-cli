@@ -338,9 +338,13 @@ public class Trigger
     private static void TriggerEmailCanaryAsync(EmailCredentialData credentialData)
     {
         var triggerableAfter = credentialData.CredentialTriggerableAfter;
-        if (triggerableAfter is { } ta && DateTime.Now < triggerableAfter)
+        if (triggerableAfter is { } triggerableAfterValue)
         {
-            throw new MarkupException($"{credentialData.Markup()} cannot be triggered until '{ta.ToString("u", CultureInfo.InvariantCulture)}' to prevent benign positives from email service provider processing.");
+            var ta = Utils.AsUtc(triggerableAfterValue);
+            if (DateTime.UtcNow < ta)
+            {
+                throw new MarkupException($"{credentialData.Markup()} cannot be triggered until '{ta.ToString("u", CultureInfo.InvariantCulture)}' to prevent benign positives from email service provider processing.");
+            }
         }
         AnsiConsole.MarkupLineInterpolated($"To trigger {credentialData.Markup()} go to your [blue]'{credentialData.Target}'[/] email inbox and open the email from [blue]'{credentialData.EmailFrom}'[/] with the subject [blue]'{credentialData.EmailSubject}'[/].");
         AnsiConsole.MarkupLine("You must allow showing images in the email for the canary to trigger.");

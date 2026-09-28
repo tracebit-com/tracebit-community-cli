@@ -124,6 +124,18 @@ static partial class Utils
         AnsiConsole.MarkupLineInterpolated($"[green]:check_mark_button: Credential {credential.Markup()} deployed{(string.IsNullOrEmpty(credential.Path) ? "" : $" to '{credential.Path}'")}[/]\n");
     }
 
+    // Timestamps returned by the API are UTC, but they can lose their kind when round tripped through the state file,
+    // so normalise them before comparing against DateTime.UtcNow
+    public static DateTime AsUtc(DateTime dateTime)
+    {
+        return dateTime.Kind switch
+        {
+            DateTimeKind.Utc => dateTime,
+            DateTimeKind.Local => dateTime.ToUniversalTime(),
+            _ => DateTime.SpecifyKind(dateTime, DateTimeKind.Utc)
+        };
+    }
+
     public static bool IsLabelFormat(string input)
     {
         return LabelFormat().IsMatch(input);

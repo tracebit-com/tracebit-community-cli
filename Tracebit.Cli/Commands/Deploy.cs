@@ -475,10 +475,11 @@ static class Deploy
             AnsiConsole.MarkupLine("[yellow]Make sure to allow showing images in emails from that domain.[/]");
 
             var triggerableAfter = credential.CredentialTriggerableAfter;
-            if (triggerableAfter is not { } ta)
+            if (triggerableAfter is not { } triggerableAfterValue)
                 return 0;
 
-            var now = DateTime.Now;
+            var ta = Utils.AsUtc(triggerableAfterValue);
+            var now = DateTime.UtcNow;
             var difference = ta - now;
             var minutesRoundedUp = (int)Math.Ceiling(difference.TotalMinutes);
             AnsiConsole.MarkupLineInterpolated(
