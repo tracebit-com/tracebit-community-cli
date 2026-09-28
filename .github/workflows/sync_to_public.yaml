@@ -17,14 +17,14 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0  # Full history needed for pushing
           fetch-tags: true
           persist-credentials: false  # Don't persist the default GITHUB_TOKEN
 
       - name: Configure Tracebit canary credentials
-        uses: tracebit-com/tracebit-community-action@d0a68cb29196eafce908de76ec596a7e9ca049da
+        uses: tracebit-com/tracebit-community-action@904ee3a84578e3b19bcd0e8c9354051fe148d51e # v1.3.0
         with:
           api-token: ${{ secrets.SECURITY_API_TOKEN }}
           customer-id: tracebit

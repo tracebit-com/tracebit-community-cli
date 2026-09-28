@@ -18,10 +18,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Configure Tracebit canary credentials
-        uses: tracebit-com/tracebit-community-action@d0a68cb29196eafce908de76ec596a7e9ca049da
+        uses: tracebit-com/tracebit-community-action@904ee3a84578e3b19bcd0e8c9354051fe148d51e # v1.3.0
         with:
           api-token: ${{ secrets.SECURITY_API_TOKEN }}
           customer-id: tracebit
@@ -30,9 +30,9 @@ jobs:
           async: true
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
-          dotnet-version: '9.0.x'
+          dotnet-version: '10.0.x'
 
       - name: Restore dependencies
         run: dotnet restore
@@ -50,7 +50,7 @@ jobs:
         run: dotnet test Tracebit.Cli.E2E.Tests/Tracebit.Cli.E2E.Tests.csproj --no-build --configuration Release --logger trx --collect:"XPlat Code Coverage" --settings coverlet.runsettings --results-directory ./coverage
 
       - name: Upload test results
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1@v7
         if: always()
         with:
           name: test-results-${{ matrix.os }}
@@ -64,10 +64,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Configure Tracebit canary credentials
-        uses: tracebit-com/tracebit-community-action@d0a68cb29196eafce908de76ec596a7e9ca049da
+        uses: tracebit-com/tracebit-community-action@904ee3a84578e3b19bcd0e8c9354051fe148d51e # v1.3.0
         with:
           api-token: ${{ secrets.SECURITY_API_TOKEN }}
           customer-id: tracebit
@@ -76,12 +76,12 @@ jobs:
           async: true
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
-          dotnet-version: '9.0.x'
+          dotnet-version: '10.0.x'
 
       - name: Download coverage artifacts
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1@v8
         with:
           name: test-results-ubuntu-latest
           path: ./coverage
@@ -93,7 +93,7 @@ jobs:
         run: reportgenerator -reports:"coverage/**/coverage.cobertura.xml" -targetdir:"merged-coverage" -reporttypes:"Cobertura"
 
       - name: Code Coverage Summary
-        uses: irongut/CodeCoverageSummary@51cc3a756ddcd398d447c044c02cb6aa83fdae95
+        uses: irongut/CodeCoverageSummary@51cc3a756ddcd398d447c044c02cb6aa83fdae95 # v1.3.0
         with:
           filename: merged-coverage/Cobertura.xml
           badge: true
@@ -106,7 +106,7 @@ jobs:
           thresholds: '40 60'
 
       - name: Add Coverage PR Comment
-        uses: marocchino/sticky-pull-request-comment@70d2764d1a7d5d9560b100cbea0077fc8f633987
+        uses: marocchino/sticky-pull-request-comment@5770ad5eb8f42dd2c4f34da00c94c5381e49af88 # v3.0.5
         if: github.event_name == 'pull_request'
         with:
           recreate: true

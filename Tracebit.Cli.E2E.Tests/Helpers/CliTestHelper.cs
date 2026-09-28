@@ -119,16 +119,20 @@ public static class CliTestHelper
         // Determine runtime identifier
         var rid = GetRuntimeIdentifier();
 
+        // The CLI targets the same framework as this test project, so use the target framework folder name
+        // (e.g. "net10.0") from this assembly's own output path (bin/<Configuration>/<TargetFramework>/)
+        var targetFramework = new DirectoryInfo(AppContext.BaseDirectory).Name;
+
         List<string> ridPaths = rid is null ? [] :
             [
-                Path.Combine(solutionDir, "Tracebit.Cli", "bin", "Debug", "net9.0", rid, binaryName),
-                Path.Combine(solutionDir, "Tracebit.Cli", "bin", "Release", "net9.0", rid, binaryName),
+                Path.Combine(solutionDir, "Tracebit.Cli", "bin", "Debug", targetFramework, rid, binaryName),
+                Path.Combine(solutionDir, "Tracebit.Cli", "bin", "Release", targetFramework, rid, binaryName),
             ];
         // Check Debug and Release configurations, with and without RID folder
         List<string> possiblePaths = [
             ..ridPaths,
-            Path.Combine(solutionDir, "Tracebit.Cli", "bin", "Debug", "net9.0", binaryName),
-            Path.Combine(solutionDir, "Tracebit.Cli", "bin", "Release", "net9.0", binaryName),
+            Path.Combine(solutionDir, "Tracebit.Cli", "bin", "Debug", targetFramework, binaryName),
+            Path.Combine(solutionDir, "Tracebit.Cli", "bin", "Release", targetFramework, binaryName),
         ];
 
         foreach (var path in possiblePaths)

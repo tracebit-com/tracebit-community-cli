@@ -2,8 +2,6 @@ using System.CommandLine;
 using System.CommandLine.Parsing;
 using System.Reflection;
 
-using NuGet.Packaging;
-
 using Spectre.Console;
 
 using Tracebit.Cli.Extensions;
@@ -90,7 +88,8 @@ public class Interactive
             {
                 // Create a new root command with the union of the options expected by the standard root
                 var commandToInvoke = Program.RootCommand();
-                commandToInvoke.Options.AddRange(commandChoice.Options);
+                foreach (var option in commandChoice.Options)
+                    commandToInvoke.Options.Add(option);
                 commandToInvoke.Action = commandChoice.Action;
                 // Invoke the subcommand in interactive mode with a new cancellation token
                 List<string> tokens = [

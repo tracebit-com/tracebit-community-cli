@@ -102,10 +102,12 @@ public class TracebitClientIntegrationTests : ApiTestBase
         Assert.NotNull(result);
         Assert.NotNull(result.Ssh);
 
-        var requests = MockServer.LogEntries.ToList();
-        Assert.Single(requests);
-        Assert.Contains("environment", requests[0].RequestMessage.Body);
-        Assert.Contains("production", requests[0].RequestMessage.Body);
+        var request = Assert.Single(MockServer.LogEntries);
+        Assert.NotNull(request);
+        var body = request.RequestMessage?.Body;
+        Assert.NotNull(body);
+        Assert.Contains("environment", body);
+        Assert.Contains("production", body);
     }
 
     [Fact]

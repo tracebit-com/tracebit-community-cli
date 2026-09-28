@@ -19,9 +19,9 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Configure Tracebit canary credentials
-        uses: tracebit-com/tracebit-community-action@d0a68cb29196eafce908de76ec596a7e9ca049da
+        uses: tracebit-com/tracebit-community-action@904ee3a84578e3b19bcd0e8c9354051fe148d51e # v1.3.0
         with:
           api-token: ${{ secrets.security-api-token }}
           customer-id: tracebit
@@ -29,7 +29,7 @@ jobs:
           profile-region: us-east-1
           async: true
       - name: Setup .NET Core SDK
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           global-json-file: ./global.json
       - name: Install tools
@@ -48,18 +48,18 @@ jobs:
       checks: write
     steps:
       - name: Configure Tracebit canary credentials
-        uses: tracebit-com/tracebit-community-action@d0a68cb29196eafce908de76ec596a7e9ca049da
+        uses: tracebit-com/tracebit-community-action@904ee3a84578e3b19bcd0e8c9354051fe148d51e # v1.3.0
         with:
           api-token: ${{ secrets.security-api-token }}
           customer-id: tracebit
           profile: administrator
           profile-region: us-east-1
           async: true
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
       - name: Setup .NET Core SDK
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           global-json-file: ./global.json
       - name: Install dependencies
@@ -67,9 +67,7 @@ jobs:
       - name: Install dependent tools
         run: dotnet tool restore
       - name: 'Qodana Scan'
-        # godana-action doesn't have a version that works with Node 24 yet:
-        # https://youtrack.jetbrains.com/issue/QD-14035/Github-Action-Node.js-20-actions-are-deprecated
-        uses: JetBrains/qodana-action@v2025.3.2
+        uses: JetBrains/qodana-action@10be11607eb323a180e2b76b26c9c5cdceac3e77 # v2026.2.1
         with:
           args: --baseline qodana.sarif.json --fail-threshold 0
         env:

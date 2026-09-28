@@ -62,9 +62,9 @@ jobs:
     environment: ${{ inputs.sign && 'production' || '' }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Configure Tracebit canary credentials
-        uses: tracebit-com/tracebit-community-action@d0a68cb29196eafce908de76ec596a7e9ca049da
+        uses: tracebit-com/tracebit-community-action@904ee3a84578e3b19bcd0e8c9354051fe148d51e # v1.3.0
         with:
           api-token: ${{ secrets.SECURITY_API_TOKEN }}
           customer-id: tracebit
@@ -72,7 +72,7 @@ jobs:
           profile-region: us-east-1
           async: true
       - name: Setup .NET Core SDK
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           global-json-file: ./global.json
       - name: Setup Java runtime
@@ -163,14 +163,14 @@ jobs:
           mv Build\tracebit-daemon.exe Build\tracebit-daemon-${{ matrix.targets.tag }}.exe
           mv Build\install-tracebit.msi Build\install-tracebit-${{ matrix.targets.tag }}.msi
       - name: Upload binary artifact
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1@v7
         with:
           name: tracebit-${{ matrix.targets.tag }}
           path: Build/tracebit*
           retention-days: 15
           if-no-files-found: error
       - name: Upload installer artifact
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1@v7
         with:
           name: install-tracebit-${{ matrix.targets.tag }}
           path: Build/install-tracebit*

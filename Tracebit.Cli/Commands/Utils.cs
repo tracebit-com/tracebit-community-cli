@@ -188,7 +188,7 @@ static partial class Utils
             var response = await getLatestCliRelease;
             var latestVersion = SemanticVersion.Parse(response.TagName);
             // Release `Prerelease` value is based on the semver, but check both in case we have manually overridden it in the release
-            if (!response.Prerelease && !latestVersion.IsPrerelease && GetCurrentVersion() < latestVersion)
+            if (!response.Prerelease && !latestVersion.IsPrerelease && (GetCurrentVersion() is not { } currentVersion || currentVersion < latestVersion))
                 ErrorConsole.MarkupLineInterpolated($"[yellow]A new version of the Tracebit CLI is available\nUpgrade to the latest version ({response.TagName}) at [blue link]{response.HtmlUrl}[/][/]");
             else if (parseResult.GetRequiredValue(GlobalOptions.Verbose))
                 ErrorConsole.WriteLine($"Tracebit CLI is up to date: currently {GetCurrentVersion()}, latest release is {latestVersion}");
