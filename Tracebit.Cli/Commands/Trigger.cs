@@ -315,10 +315,10 @@ public class Trigger
             Scheme = "https",
             Host = credential.Target,
         }.Uri;
-        Process.Start(new ProcessStartInfo { FileName = triggerUrl.ToString(), UseShellExecute = true });
+        AnsiConsole.MarkupLineInterpolated($"Opening [blue link]{triggerUrl}[/] in your browser");
         try
         {
-            AnsiConsole.MarkupLineInterpolated($"Opening [blue link]{triggerUrl}[/] in your browser");
+            Process.Start(new ProcessStartInfo { FileName = triggerUrl.ToString(), UseShellExecute = true });
         }
         catch
         {

@@ -39,7 +39,7 @@ public static class TextPrompts
             .DefaultValue("")
             .DefaultValueStyle(Style.Parse("silver"))
             .Validate(s =>
-                Utils.IsLabelFormat(s)
+                string.IsNullOrEmpty(s) || Utils.IsLabelFormat(s)
                     ? ValidationResult.Success()
                     : ValidationResult.Error(Utils.InvalidLabelFormatMessage()));
 

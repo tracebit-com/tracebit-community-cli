@@ -50,7 +50,7 @@ jobs:
           - runs-on: macos-latest
             tag: osx-arm
             arch: arm64
-          - runs-on: windows-latest
+          - runs-on: windows-2022
             tag: windows-x64
             arch: x86_64
         exclude:

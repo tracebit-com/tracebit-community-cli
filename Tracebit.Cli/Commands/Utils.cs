@@ -17,8 +17,6 @@ namespace Tracebit.Cli.Commands;
 
 static partial class Utils
 {
-    private static readonly Random Random = new();
-
     public static int TODO(ParseResult _)
     {
         throw new NotImplementedException();
@@ -37,7 +35,7 @@ static partial class Utils
 
         for (int i = 0; i < stringChars.Length; i++)
         {
-            stringChars[i] = chars[Random.Next(chars.Length)];
+            stringChars[i] = chars[Random.Shared.Next(chars.Length)];
         }
 
         return new string(stringChars);
