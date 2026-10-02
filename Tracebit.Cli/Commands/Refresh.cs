@@ -97,7 +97,7 @@ public class Refresh
         return 0;
     }
 
-    private static bool AwsShouldRefresh(CredentialData awsCredential, DateTime now)
+    internal static bool AwsShouldRefresh(CredentialData awsCredential, DateTime now)
     {
         if (awsCredential.ExpiresAt is null)
             return false;
@@ -105,13 +105,13 @@ public class Refresh
         return now >= refreshTime;
     }
 
-    private static bool SshShouldRefresh(CredentialData sshCredential, DateTime now)
+    internal static bool SshShouldRefresh(CredentialData sshCredential, DateTime now)
     {
         var refreshTime = sshCredential.CreatedAt + SshRefreshTimeAfterCreation;
         return now >= refreshTime;
     }
 
-    private static bool HttpShouldRefresh(CredentialData httpCredential, DateTime now)
+    internal static bool HttpShouldRefresh(CredentialData httpCredential, DateTime now)
     {
         if (httpCredential.ExpiresAt is null)
             return false;

@@ -6,6 +6,9 @@
         <Configuration>
           <Format>cobertura</Format>
           <Exclude>[*.Tests]*,[*.Integration.Tests]*,[*.E2E.Tests]*</Exclude>
+          <!-- Source generated code (System.Text.Json, Regex) inflates coverage -->
+          <ExcludeByFile>**/obj/**/*.g.cs</ExcludeByFile>
+          <ExcludeByAttribute>GeneratedCodeAttribute</ExcludeByAttribute>
           <IncludeTestAssembly>false</IncludeTestAssembly>
         </Configuration>
       </DataCollector>

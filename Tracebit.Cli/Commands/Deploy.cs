@@ -36,7 +36,7 @@ static class Deploy
         }
     };
 
-    private static Labels _labelsParsing(string value)
+    internal static Labels _labelsParsing(string value)
     {
         return value.Split(',', StringSplitOptions.RemoveEmptyEntries)
             .Select(label => label.Split('=', 2))

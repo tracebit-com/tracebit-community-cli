@@ -4,13 +4,30 @@ namespace Tracebit.Cli.Deploy;
 
 public static class Deployer
 {
-    private static readonly string AwsDir =
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".aws");
-    private static readonly string AwsConfig = Path.Combine(AwsDir, "config");
-    public static readonly string AwsCredentials = Path.Combine(AwsDir, "credentials");
-    private static readonly string SshDir =
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".ssh");
-    private static readonly string SshConfig = Path.Combine(SshDir, "config");
+    private static readonly AsyncLocal<string?> _homeDirectoryOverride = new();
+
+    private static string HomeDirectory =>
+        _homeDirectoryOverride.Value ?? Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+
+    /// <summary>
+    /// Overrides the home directory used for AWS and SSH files for the current async context. Used for testing.
+    /// </summary>
+    internal static IDisposable SetHomeDirectoryForTest(string path)
+    {
+        _homeDirectoryOverride.Value = path;
+        return new HomeDirectoryScope();
+    }
+
+    private sealed class HomeDirectoryScope : IDisposable
+    {
+        public void Dispose() => _homeDirectoryOverride.Value = null;
+    }
+
+    private static string AwsDir => Path.Combine(HomeDirectory, ".aws");
+    private static string AwsConfig => Path.Combine(AwsDir, "config");
+    public static string AwsCredentials => Path.Combine(AwsDir, "credentials");
+    private static string SshDir => Path.Combine(HomeDirectory, ".ssh");
+    private static string SshConfig => Path.Combine(SshDir, "config");
 
     public static string SshPrivateKeyFile(string path) => Path.Combine(SshDir, path);
 
@@ -92,7 +109,7 @@ public static class Deployer
         await WriteLinesToFileAsync(sshConfigFileStream, filteredLines);
     }
 
-    private static (List<string>, string?) RemoveHostEntry(List<string> lines, string targetHost)
+    internal static (List<string>, string?) RemoveHostEntry(List<string> lines, string targetHost)
     {
         var result = new List<string>();
         string? identityFile = null;
@@ -133,7 +150,7 @@ public static class Deployer
         return (result, identityFile);
     }
 
-    private static string GetConfigIndentation(List<string> configLines)
+    internal static string GetConfigIndentation(List<string> configLines)
     {
         foreach (var line in configLines)
         {
@@ -216,7 +233,7 @@ public static class Deployer
         await WriteLinesToFileAsync(awsCredentialsFileStream, filteredCredentialsLines);
     }
 
-    private static List<string> RemoveAwsProfileFromLines(List<string> lines, string targetProfile, bool hasProfilePrefix)
+    internal static List<string> RemoveAwsProfileFromLines(List<string> lines, string targetProfile, bool hasProfilePrefix)
     {
         /*
          * This method is used to remove an AWS profile from both the config and credentials files.
@@ -320,7 +337,7 @@ public static class Deployer
         {
             awsConfigFileStream = awsConfigFileInfo.Open(FileMode.Open, FileAccess.ReadWrite, FileShare.None);
         }
-        catch (FileNotFoundException) { }
+        catch (IOException e) when (e is FileNotFoundException or DirectoryNotFoundException) { }
 
         var awsCredentialsFileInfo = new FileInfo(AwsCredentials);
         FileStream? awsCredentialsFileStream = null;
@@ -328,7 +345,7 @@ public static class Deployer
         {
             awsCredentialsFileStream = awsCredentialsFileInfo.Open(FileMode.Open, FileAccess.ReadWrite, FileShare.None);
         }
-        catch (FileNotFoundException) { }
+        catch (IOException e) when (e is FileNotFoundException or DirectoryNotFoundException) { }
 
         try
         {
@@ -364,7 +381,7 @@ public static class Deployer
             // NOTE: this will keep the file open to prevent other processes from writing to it
             sshConfigFileStream = sshConfigFileInfo.Open(FileMode.Open, FileAccess.ReadWrite, FileShare.None);
         }
-        catch (FileNotFoundException)
+        catch (IOException e) when (e is FileNotFoundException or DirectoryNotFoundException)
         {
             // File not found, nothing to remove
             return;
@@ -407,6 +424,10 @@ public static class Deployer
 
     private static void DeleteSshKeyFiles(string sshCredentialPath)
     {
+        // File.Delete is a no-op for a missing file, but throws if the containing directory is gone
+        if (!Directory.Exists(Path.GetDirectoryName(sshCredentialPath)))
+            return;
+
         File.Delete(sshCredentialPath);
         File.Delete($"{sshCredentialPath}.pub");
     }
