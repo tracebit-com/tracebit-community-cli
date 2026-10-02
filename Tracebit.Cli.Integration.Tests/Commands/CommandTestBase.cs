@@ -98,7 +98,7 @@ public abstract class CommandTestBase : BaseIntegrationTest
 
     protected List<(string Name, string Type)> RemoveRequests() => _fixture.Api
         .FindLogEntries(Request.Create().WithPath(RemovePath).UsingPost())
-        .Select(e => JsonDocument.Parse(e.RequestMessage.Body!).RootElement)
+        .Select(e => JsonDocument.Parse(e.RequestMessage!.Body!).RootElement)
         .Select(b => (b.GetProperty("name").GetString()!, b.GetProperty("type").GetString()!))
         .ToList();
 

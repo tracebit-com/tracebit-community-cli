@@ -13,11 +13,11 @@ public class RemoveCommandTests(CommandFixture fixture) : CommandTestBase(fixtur
     private string AwsCredentialsFile => Path.Combine(TempDirectory, ".aws", "credentials");
     private string SshConfigFile => Path.Combine(TempDirectory, ".ssh", "config");
 
-    private static async Task<AwsCredentialData> DeployAwsAsync(string name = "canary", string profile = "canary-profile")
+    private static async Task DeployAwsAsync(string name = "canary", string profile = "canary-profile")
     {
         var credentials = TestDataBuilder.BuildAwsCredentials();
         await Deployer.WriteAwsKeyToConfigAsync(credentials, profile, "eu-west-1", CancellationToken.None);
-        return StateManager.AddAwsCredential(name, null, credentials, profile, "eu-west-1");
+        StateManager.AddAwsCredential(name, null, credentials, profile, "eu-west-1");
     }
 
     private static async Task<SshCredentialData> DeploySshAsync(string name = "canary")
