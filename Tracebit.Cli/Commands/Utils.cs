@@ -17,11 +17,6 @@ namespace Tracebit.Cli.Commands;
 
 static partial class Utils
 {
-    public static int TODO(ParseResult _)
-    {
-        throw new NotImplementedException();
-    }
-
     // Used by background tasks to send errors to standard out
     public static readonly IAnsiConsole ErrorConsole = AnsiConsole.Create(new AnsiConsoleSettings
     {

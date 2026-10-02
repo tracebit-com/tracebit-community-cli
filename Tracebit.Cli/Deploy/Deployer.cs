@@ -138,17 +138,7 @@ public static class Deployer
         foreach (var line in configLines)
         {
             if (line.Length > 0 && char.IsWhiteSpace(line[0]))
-            {
-                var indent = "";
-                foreach (var ch in line)
-                {
-                    if (char.IsWhiteSpace(ch))
-                        indent += ch;
-                    else
-                        break;
-                }
-                return indent;
-            }
+                return new string(line.TakeWhile(char.IsWhiteSpace).ToArray());
         }
 
         return "";

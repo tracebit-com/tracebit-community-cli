@@ -59,6 +59,8 @@ static class Deploy
         Description = "The AWS profile region of the canary credentials"
     };
 
+    private const string UsernamePasswordCommandName = "username-password";
+
     private static readonly Option<string> SshKeyFileOption = new("--ssh-key-file")
     {
         Description = "The name of the local SSH key file"
@@ -303,7 +305,7 @@ static class Deploy
                         deployEmailTask,
                         Task.Delay(400, cancellationToken)
                     ));
-                    var emailResponse = deployEmailTask.Result;
+                    var emailResponse = await deployEmailTask;
                     var emailCredential = StateManager.AddEmailCredential(Constants.EmailCanaryName, labels, emailResponse);
                     deployedCredentials.Add(emailCredential);
                     AnsiConsole.MarkupLineInterpolated(
@@ -386,7 +388,7 @@ static class Deploy
 
     private static Command DeployUsernamePasswordCommand(IServiceProvider services)
     {
-        var command = DeployCanaryCredentialsCommand("username-password", "Deploy username/password canary");
+        var command = DeployCanaryCredentialsCommand(UsernamePasswordCommandName, "Deploy username/password canary");
         command.Add(JsonOutputOption);
 
         command.SetAction(async (parseResult, cancellationToken) =>
@@ -605,7 +607,7 @@ static class Deploy
                 $"To deploy the [darkgoldenrod]username/password[/] canary open your password manager and create a new login for domain [blue]'{httpCanaryCredentials.HostNames.First()}'[/] and insert:");
             AnsiConsole.MarkupLineInterpolated($"[darkgoldenrod]Suggested password manager login name:[/] {suggestedName}");
             AnsiConsole.MarkupLineInterpolated($"[darkgoldenrod]username:[/] {usernamePassword.Username}\n[darkgoldenrod]password:[/] {usernamePassword.Password}");
-            AnsiConsole.MarkupLineInterpolated($"[italic gray]You can use '[purple]{Program.RootCommand().Name} {BaseCommand.Name} {DeployUsernamePasswordCommand(new ServiceCollection().BuildServiceProvider()).Name} {JsonOutputOption.Name}[/]' if you need the credentials in JSON form[/]");
+            AnsiConsole.MarkupLineInterpolated($"[italic gray]You can use '[purple]{Program.RootCommand().Name} {BaseCommand.Name} {UsernamePasswordCommandName} {JsonOutputOption.Name}[/]' if you need the credentials in JSON form[/]");
         }
 
         if (verbose)

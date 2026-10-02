@@ -6,7 +6,7 @@
           "environmentVariables": {
               "ASPNETCORE_ENVIRONMENT": "Development",
               "DOTNET_ENVIRONMENT": "Development",
-              "TRACEBIT_PORTAL_HOST": "localhost:7210",
+              "TRACEBIT_URL": "https://localhost:7210",
               "TRACEBIT_ENVIRONMENT": "stage",
               "DOTNET_SYSTEM_CONSOLE_ALLOW_ANSI_COLOR_REDIRECTION": "true"
           }
@@ -17,7 +17,7 @@
           "environmentVariables": {
               "ASPNETCORE_ENVIRONMENT": "Development",
               "DOTNET_ENVIRONMENT": "Development",
-              "TRACEBIT_PORTAL_HOST": "localhost:7210",
+              "TRACEBIT_URL": "https://localhost:7210",
               "TRACEBIT_ENVIRONMENT": "stage",
               "DOTNET_SYSTEM_CONSOLE_ALLOW_ANSI_COLOR_REDIRECTION": "true"
           },
@@ -29,7 +29,7 @@
           "environmentVariables": {
               "ASPNETCORE_ENVIRONMENT": "Development",
               "DOTNET_ENVIRONMENT": "Development",
-              "TRACEBIT_PORTAL_HOST": "localhost:7210",
+              "TRACEBIT_URL": "https://localhost:7210",
               "TRACEBIT_ENVIRONMENT": "stage",
               "DOTNET_SYSTEM_CONSOLE_ALLOW_ANSI_COLOR_REDIRECTION": "true"
           },
@@ -41,7 +41,7 @@
           "environmentVariables": {
               "ASPNETCORE_ENVIRONMENT": "Development",
               "DOTNET_ENVIRONMENT": "Development",
-              "TRACEBIT_PORTAL_HOST": "localhost:7210",
+              "TRACEBIT_URL": "https://localhost:7210",
               "TRACEBIT_ENVIRONMENT": "stage",
               "DOTNET_SYSTEM_CONSOLE_ALLOW_ANSI_COLOR_REDIRECTION": "true"
           },
@@ -53,7 +53,7 @@
           "environmentVariables": {
               "ASPNETCORE_ENVIRONMENT": "Development",
               "DOTNET_ENVIRONMENT": "Development",
-              "TRACEBIT_PORTAL_HOST": "localhost:7210",
+              "TRACEBIT_URL": "https://localhost:7210",
               "TRACEBIT_ENVIRONMENT": "stage",
               "DOTNET_SYSTEM_CONSOLE_ALLOW_ANSI_COLOR_REDIRECTION": "true"
             },

@@ -78,9 +78,6 @@ public class Refresh
                         // This shouldn't happen as username/password canaries don't have an expiration
                         AnsiConsole.MarkupLine($"[yellow]Username/password can't be refreshed automatically. Remove and deploy manually.[/]");
                         break;
-                    // response = await Deploy.IssueCredentialsAsync(credentialIssuer, credential.Name, canaryTypes: [credential.TypeName], credential.Labels, verbose);
-                    // await RefreshUsernamePasswordAsync(response, credentialIssuer, credential, verbose, cancellationToken);
-                    // break;
                     case EmailCredentialData email:
                         await RefreshEmailCanaryAsync(tracebitClient, email, verbose, cancellationToken);
                         break;
@@ -147,8 +144,9 @@ public class Refresh
             return;
         }
 
-        await Deploy.DeploySshAsync(response.Ssh, tracebitClient, sshCredential.Path, verbose, cancellationToken);
-        StateManager.AddSshCredential(sshCredential.Name, sshCredential.Labels, response.Ssh, sshCredential.Path);
+        var sshKeyFileName = Path.GetFileName(sshCredential.Path);
+        await Deploy.DeploySshAsync(response.Ssh, tracebitClient, sshKeyFileName, verbose, cancellationToken);
+        StateManager.AddSshCredential(sshCredential.Name, sshCredential.Labels, response.Ssh, sshKeyFileName);
     }
 
     private static async Task RefreshBrowserCookieAsync(IssueCredentialsResponse response, TracebitClient tracebitClient, GitlabCookieCredentialData credential, bool verbose, CancellationToken cancellationToken)
@@ -162,20 +160,6 @@ public class Refresh
 
         await Deploy.DeployBrowserCookieAsync(newCredential, tracebitClient, verbose, cancellationToken);
         StateManager.AddBrowserCookieCredential(credential.Name, credential.Labels, newCredential);
-    }
-
-    // ReSharper disable once UnusedMember.Local
-    private static async Task RefreshUsernamePasswordAsync(IssueCredentialsResponse response, TracebitClient tracebitClient, EmailCredentialData credential, bool verbose, CancellationToken cancellationToken)
-    {
-        var newCredential = response.Http?.GetValueOrDefault(Constants.GitlabUsernamePasswordInstanceId);
-        if (newCredential is null)
-        {
-            AnsiConsole.MarkupLine("[red]Username/password canary could not be refreshed.[/]");
-            return;
-        }
-
-        await Deploy.DeployUsernamePasswordAsync(newCredential, tracebitClient, verbose, jsonOutput: false, cancellationToken);
-        StateManager.AddUsernamePasswordCredential(credential.Name, credential.Labels, newCredential);
     }
 
     private static async Task RefreshEmailCanaryAsync(TracebitClient tracebitClient, EmailCredentialData credential, bool verbose, CancellationToken cancellationToken)
