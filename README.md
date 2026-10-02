@@ -1,4 +1,5 @@
 # Tracebit Community CLI
+[![Protected by Tracebit Community Edition](https://raw.githubusercontent.com/tracebit-com/tracebit-community-action/main/assets/badges/tracebit-badge.svg)](https://community.tracebit.com/supplychainattacks)
 ![GitHub Release](https://img.shields.io/github/v/release/tracebit-com/tracebit-community-cli?sort=semver)
 
 The Tracebit Community CLI is the command-line tool for Tracebit Community Edition, which deploys and maintains security canaries. These canaries are a form of deception—fake credentials and assets that proactively detect intrusions across your devices and accounts.
