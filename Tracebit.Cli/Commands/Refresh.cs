@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Spectre.Console;
 
 using Tracebit.Cli.API;
+using Tracebit.Cli.Deploy;
 using Tracebit.Cli.State;
 
 namespace Tracebit.Cli.Commands;
@@ -132,8 +133,11 @@ public class Refresh
         awsCredential.AwsProfile ??= (string)Deploy.AwsProfileOption.GetDefaultValue()!;
         awsCredential.AwsRegion ??= (string)Deploy.AwsRegionOption.GetDefaultValue()!;
 
-        await Deploy.DeployAwsAsync(response.Aws, awsCredential.AwsProfile, awsCredential.AwsRegion, tracebitClient, verbose, cancellationToken);
-        StateManager.AddAwsCredential(awsCredential.Name, awsCredential.Labels, response.Aws, awsCredential.AwsProfile, awsCredential.AwsRegion);
+        // The state file is the only authority on which profile is ours; the recorded access key ID is checked against the file before replacing
+        var ownership = AwsProfileOwnership.Owned(awsCredential.AwsAccessKeyId);
+        await Deploy.DeployAwsAsync(response.Aws, awsCredential.AwsProfile, awsCredential.AwsRegion, ownership,
+            () => StateManager.AddAwsCredential(awsCredential.Name, awsCredential.Labels, response.Aws, awsCredential.AwsProfile, awsCredential.AwsRegion),
+            tracebitClient, verbose, cancellationToken);
     }
 
     private static async Task RefreshSshAsync(IssueCredentialsResponse response, TracebitClient tracebitClient, SshCredentialData sshCredential, bool verbose, CancellationToken cancellationToken)
@@ -145,8 +149,11 @@ public class Refresh
         }
 
         var sshKeyFileName = Path.GetFileName(sshCredential.Path);
-        await Deploy.DeploySshAsync(response.Ssh, tracebitClient, sshKeyFileName, verbose, cancellationToken);
-        StateManager.AddSshCredential(sshCredential.Name, sshCredential.Labels, response.Ssh, sshKeyFileName);
+        // Only the key path recorded in state may be deleted, and only if the private key file still matches what we wrote
+        var ownership = SshKeyOwnership.Owned(sshCredential.Path, sshCredential.SshPrivateKeySha256);
+        await Deploy.DeploySshAsync(response.Ssh, sshKeyFileName, ownership,
+            () => StateManager.AddSshCredential(sshCredential.Name, sshCredential.Labels, response.Ssh, sshKeyFileName),
+            tracebitClient, verbose, cancellationToken);
     }
 
     private static async Task RefreshBrowserCookieAsync(IssueCredentialsResponse response, TracebitClient tracebitClient, GitlabCookieCredentialData credential, bool verbose, CancellationToken cancellationToken)

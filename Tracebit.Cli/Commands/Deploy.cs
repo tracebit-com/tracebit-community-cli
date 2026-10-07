@@ -1,4 +1,5 @@
 using System.CommandLine;
+using System.CommandLine.Parsing;
 using System.Diagnostics;
 using System.Globalization;
 using System.Text.Json;
@@ -74,7 +75,7 @@ static class Deploy
 
     public static Command Command(IServiceProvider services)
     {
-        ConfigureAwsProfileValidation();
+        ConfigureAwsOptionValidation();
         ConfigureSshFileOptionValidation();
         ConfigureLabelsOptionValidation();
 
@@ -112,6 +113,7 @@ static class Deploy
             }
 
             StateManager.EnsureCredentialDoesNotExist<AwsCredentialData>(name, parseResult, NameOption.Name);
+            await Deployer.EnsureAwsProfileIsFreeAsync(profile, cancellationToken);
 
             var credential = await AnsiConsole.Status().DefaultSpinner().StartAsync("Deploying...", async _ =>
             {
@@ -120,10 +122,9 @@ static class Deploy
                 if (response.Aws is null)
                     throw new Exception("AWS credentials were not found in issued credentials");
 
-                await DeployAwsAsync(response.Aws, profile, region, tracebitClient, verbose, cancellationToken);
-
-                var credential = StateManager.AddAwsCredential(name, labels, response.Aws, profile, region);
-                return credential;
+                return await DeployAwsAsync(response.Aws, profile, region, AwsProfileOwnership.None,
+                    () => StateManager.AddAwsCredential(name, labels, response.Aws, profile, region),
+                    tracebitClient, verbose, cancellationToken);
             });
 
             AnsiConsole.MarkupLineInterpolated($"[green]Credential {credential.Markup()} deployed to '{credential.Path}'[/]");
@@ -156,6 +157,7 @@ static class Deploy
             }
 
             StateManager.EnsureCredentialDoesNotExist<SshCredentialData>(name, parseResult, NameOption.Name);
+            Deployer.EnsureSshKeyFileIsFree(sshKeyFileName);
 
             var credential = await AnsiConsole.Status().DefaultSpinner().StartAsync("Deploying...", async _ =>
             {
@@ -164,10 +166,9 @@ static class Deploy
                 if (response.Ssh is null)
                     throw new Exception("SSH credentials were not found in issued credentials");
 
-                await DeploySshAsync(response.Ssh, tracebitClient, sshKeyFileName, verbose, cancellationToken);
-
-                var credential = StateManager.AddSshCredential(name, labels, response.Ssh, sshKeyFileName);
-                return credential;
+                return await DeploySshAsync(response.Ssh, sshKeyFileName, SshKeyOwnership.None,
+                    () => StateManager.AddSshCredential(name, labels, response.Ssh, sshKeyFileName),
+                    tracebitClient, verbose, cancellationToken);
             });
 
             AnsiConsole.MarkupLineInterpolated($"[green]Credential {credential.Markup()} deployed to '{credential.Path}'[/]");
@@ -222,6 +223,23 @@ static class Deploy
             var missingIssueCredentialTypes = new HashSet<string>(missingCredentialTypes.Except(new HashSet<string> { "email" }));
             if (missingIssueCredentialTypes.Count > 0)
             {
+                // Skip any type whose destination is already taken by something we do not own, and carry on with the rest
+                if (missingIssueCredentialTypes.Contains(AwsCredentialData.TypeDiscriminator))
+                {
+                    try
+                    { await Deployer.EnsureAwsProfileIsFreeAsync(profile, cancellationToken); }
+                    catch (UnmanagedConfigEntryException e) { SkipCanaryType(missingIssueCredentialTypes, AwsCredentialData.TypeDiscriminator, "AWS", e); }
+                }
+                if (missingIssueCredentialTypes.Contains(SshCredentialData.TypeDiscriminator))
+                {
+                    try
+                    { Deployer.EnsureSshKeyFileIsFree(sshKeyFileName); }
+                    catch (UnmanagedConfigEntryException e) { SkipCanaryType(missingIssueCredentialTypes, SshCredentialData.TypeDiscriminator, "SSH", e); }
+                }
+            }
+
+            if (missingIssueCredentialTypes.Count > 0)
+            {
                 IssueCredentialsResponse? issueCredentialsResponse = null;
                 try
                 {
@@ -237,25 +255,49 @@ static class Deploy
                     if (issueCredentialsResponse.Aws is not null)
                     {
                         AnsiConsole.MarkupLine("Deploying [darkgoldenrod]AWS[/] credentials");
-                        await AnsiConsole.Status().DefaultSpinner().StartAsync("Deploying...", async _ => await Task.WhenAll(
-                            DeployAwsAsync(issueCredentialsResponse.Aws, profile, region, tracebitClient, verbose, cancellationToken),
-                            Task.Delay(400, cancellationToken)
-                        ));
-                        var deployedCredential = StateManager.AddAwsCredential(name, labels, issueCredentialsResponse.Aws, profile, region);
-                        deployedCredentials.Add(deployedCredential);
-                        Utils.PrintCanaryCredentialSuccessfullyDeployedMessage(deployedCredential);
+                        AwsCredentialData? deployedCredential = null;
+                        try
+                        {
+                            await AnsiConsole.Status().DefaultSpinner().StartAsync("Deploying...", async _ => await Task.WhenAll(
+                                Task.Run(async () => deployedCredential = await DeployAwsAsync(issueCredentialsResponse.Aws, profile, region, AwsProfileOwnership.None,
+                                    () => StateManager.AddAwsCredential(name, labels, issueCredentialsResponse.Aws, profile, region),
+                                    tracebitClient, verbose, cancellationToken), cancellationToken),
+                                Task.Delay(400, cancellationToken)
+                            ));
+                        }
+                        catch (UnmanagedConfigEntryException e)
+                        {
+                            PrintSkippedCanaryType("AWS", e);
+                        }
+                        if (deployedCredential is not null)
+                        {
+                            deployedCredentials.Add(deployedCredential);
+                            Utils.PrintCanaryCredentialSuccessfullyDeployedMessage(deployedCredential);
+                        }
                     }
 
                     if (issueCredentialsResponse.Ssh is not null)
                     {
                         AnsiConsole.MarkupLine("Deploying [darkgoldenrod]SSH[/] credentials");
-                        await AnsiConsole.Status().DefaultSpinner().StartAsync("Deploying...", async _ => await Task.WhenAll(
-                            DeploySshAsync(issueCredentialsResponse.Ssh, tracebitClient, sshKeyFileName, verbose, cancellationToken),
-                            Task.Delay(400, cancellationToken)
-                        ));
-                        var deployedCredential = StateManager.AddSshCredential(name, labels, issueCredentialsResponse.Ssh, sshKeyFileName);
-                        deployedCredentials.Add(deployedCredential);
-                        Utils.PrintCanaryCredentialSuccessfullyDeployedMessage(deployedCredential);
+                        SshCredentialData? deployedCredential = null;
+                        try
+                        {
+                            await AnsiConsole.Status().DefaultSpinner().StartAsync("Deploying...", async _ => await Task.WhenAll(
+                                Task.Run(async () => deployedCredential = await DeploySshAsync(issueCredentialsResponse.Ssh, sshKeyFileName, SshKeyOwnership.None,
+                                    () => StateManager.AddSshCredential(name, labels, issueCredentialsResponse.Ssh, sshKeyFileName),
+                                    tracebitClient, verbose, cancellationToken), cancellationToken),
+                                Task.Delay(400, cancellationToken)
+                            ));
+                        }
+                        catch (UnmanagedConfigEntryException e)
+                        {
+                            PrintSkippedCanaryType("SSH", e);
+                        }
+                        if (deployedCredential is not null)
+                        {
+                            deployedCredentials.Add(deployedCredential);
+                            Utils.PrintCanaryCredentialSuccessfullyDeployedMessage(deployedCredential);
+                        }
                     }
 
                     if (issueCredentialsResponse.Http is not null && issueCredentialsResponse.Http.TryGetValue("gitlab-cookie", out var browserCookieCredentials))
@@ -515,32 +557,94 @@ static class Deploy
         return emailResponse;
     }
 
-    public static async Task DeployAwsAsync(AwsCanaryCredentials awsCanaryCredentials, string profile, string region, TracebitClient tracebitClient, bool verbose, CancellationToken cancellationToken)
+    /// <summary>
+    /// Writes the AWS profile, records it in state, then confirms with the API. Doing state before confirmation means
+    /// a failed or interrupted confirmation can never leave a deployed-but-untracked profile. For a fresh deployment
+    /// a failed confirmation also rolls the local files and state back.
+    /// </summary>
+    public static async Task<AwsCredentialData> DeployAwsAsync(AwsCanaryCredentials awsCanaryCredentials, string profile, string region, AwsProfileOwnership ownership,
+        Func<AwsCredentialData> recordState, TracebitClient tracebitClient, bool verbose, CancellationToken cancellationToken)
     {
         if (verbose)
             AnsiConsole.MarkupLine("Writing AWS credentials to config");
-        await Deployer.WriteAwsKeyToConfigAsync(awsCanaryCredentials, profile, region, cancellationToken);
+        await Deployer.WriteAwsKeyToConfigAsync(awsCanaryCredentials, profile, region, ownership, cancellationToken);
+        var credential = recordState();
 
         if (verbose)
             AnsiConsole.MarkupLine("Confirming AWS credentials");
-        var awsConfirmationId = awsCanaryCredentials.AwsConfirmationId;
-        await tracebitClient.ConfirmCredentialsAsync(awsConfirmationId, cancellationToken);
+        try
+        {
+            await tracebitClient.ConfirmCredentialsAsync(awsCanaryCredentials.AwsConfirmationId, cancellationToken);
+        }
+        catch when (!ownership.IsOwned)
+        {
+            await RollBackAsync(async () =>
+            {
+                await Deployer.RemoveAwsCredential(profile, awsCanaryCredentials.AwsAccessKeyId, CancellationToken.None);
+                StateManager.RemoveCredential(credential);
+            });
+            throw;
+        }
         if (verbose)
             AnsiConsole.MarkupLine("AWS credentials confirmed");
+        return credential;
     }
 
-    public static async Task DeploySshAsync(SshCanaryCredentials sshCanaryCredentials, TracebitClient tracebitClient, string sshKeyFileName, bool verbose, CancellationToken cancellationToken)
+    /// <summary>
+    /// Writes the SSH key and host entry, records them in state, then confirms with the API. See
+    /// <see cref="DeployAwsAsync"/> for why state comes before confirmation.
+    /// </summary>
+    public static async Task<SshCredentialData> DeploySshAsync(SshCanaryCredentials sshCanaryCredentials, string sshKeyFileName, SshKeyOwnership ownership,
+        Func<SshCredentialData> recordState, TracebitClient tracebitClient, bool verbose, CancellationToken cancellationToken)
     {
         if (verbose)
             AnsiConsole.MarkupLine("Writing SSH credentials to config");
-        await Deployer.WriteSshKeyToConfig(sshCanaryCredentials, sshKeyFileName, cancellationToken);
+        await Deployer.WriteSshKeyToConfig(sshCanaryCredentials, sshKeyFileName, ownership, cancellationToken);
+        var credential = recordState();
 
         if (verbose)
             AnsiConsole.MarkupLine("Confirming SSH credentials");
-        var sshConfirmationId = sshCanaryCredentials.SshConfirmationId;
-        await tracebitClient.ConfirmCredentialsAsync(sshConfirmationId, cancellationToken);
+        try
+        {
+            await tracebitClient.ConfirmCredentialsAsync(sshCanaryCredentials.SshConfirmationId, cancellationToken);
+        }
+        catch when (!ownership.IsOwned)
+        {
+            await RollBackAsync(async () =>
+            {
+                await Deployer.RemoveSshCredential(sshCanaryCredentials.SshIp, Deployer.SshPrivateKeyFile(sshKeyFileName),
+                    SshKeyOwnership.FingerprintBase64(sshCanaryCredentials.SshPrivateKey), CancellationToken.None);
+                StateManager.RemoveCredential(credential);
+            });
+            throw;
+        }
         if (verbose)
             AnsiConsole.MarkupLine("SSH credentials confirmed");
+        return credential;
+    }
+
+    private static void SkipCanaryType(HashSet<string> types, string type, string prettyName, UnmanagedConfigEntryException e)
+    {
+        types.Remove(type);
+        PrintSkippedCanaryType(prettyName, e);
+    }
+
+    private static void PrintSkippedCanaryType(string prettyName, UnmanagedConfigEntryException e)
+    {
+        AnsiConsole.MarkupLineInterpolated($"[yellow]:warning: Skipping {prettyName} canary: {e.Message}[/]");
+    }
+
+    private static async Task RollBackAsync(Func<Task> rollBack)
+    {
+        try
+        {
+            await rollBack();
+        }
+        catch (Exception e)
+        {
+            // The original confirmation failure is the error the user needs to see; just note that cleanup also failed
+            AnsiConsole.MarkupLineInterpolated($"[yellow]Could not roll back local deployment: {e.Message}[/]");
+        }
     }
 
     public static async Task BrowserDeployHttpCredentialAsync(HttpCanaryCredentials httpCanaryCredentials)
@@ -618,38 +722,31 @@ static class Deploy
             AnsiConsole.MarkupLine("Username/password canary confirmed");
     }
 
-    private static void ConfigureAwsProfileValidation()
+    private static void ConfigureAwsOptionValidation()
     {
-        AwsProfileOption.Validators.Add(result =>
-        {
-            if (result.Tokens.Count == 0)
-                return;
-            var value = result.Tokens.Single().Value;
-            if (value.Any(char.IsWhiteSpace))
-            {
-                result.AddError("Whitespace in AWS profile name not supported");
-            }
-            // According to official AWS docs: Do not use the word profile when creating an entry in the credentials file.
-            if (value == "profile")
-            {
-                result.AddError("AWS profile name cannot be 'profile'");
-            }
-        });
+        AwsProfileOption.Validators.Add(result => RunDeploymentInputValidator(result, DeploymentInputValidator.ValidateAwsProfile));
+        AwsRegionOption.Validators.Add(result => RunDeploymentInputValidator(result, DeploymentInputValidator.ValidateAwsRegion));
     }
 
     private static void ConfigureSshFileOptionValidation()
     {
         SshKeyFileOption.AcceptLegalFileNamesOnly();
-        SshKeyFileOption.Validators.Add(result =>
+        SshKeyFileOption.Validators.Add(result => RunDeploymentInputValidator(result, DeploymentInputValidator.ValidateSshKeyFileName));
+    }
+
+    // Command-line options share the rules enforced at the deployment boundary so users get the error early
+    private static void RunDeploymentInputValidator(OptionResult result, Action<string> validate)
+    {
+        if (result.Tokens.Count == 0)
+            return;
+        try
         {
-            if (result.Tokens.Count == 0)
-                return;
-            var value = result.Tokens.Single().Value;
-            if (value.Any(char.IsWhiteSpace))
-            {
-                result.AddError("Whitespace in SSH key file names not supported");
-            }
-        });
+            validate(result.Tokens.Single().Value);
+        }
+        catch (InvalidDeploymentInputException e)
+        {
+            result.AddError(e.Message);
+        }
     }
 
     private static void ConfigureLabelsOptionValidation()

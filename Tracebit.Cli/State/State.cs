@@ -149,7 +149,8 @@ public static class StateManager
                 Path = Deployer.AwsCredentials,
                 Labels = labels,
                 AwsProfile = profile,
-                AwsRegion = region
+                AwsRegion = region,
+                AwsAccessKeyId = awsCredentials.AwsAccessKeyId
             };
             AddOrReplaceCredential(state, credential);
             return credential;
@@ -167,7 +168,8 @@ public static class StateManager
                 ExpiresAt = sshCredentials.SshExpiration,
                 Path = Deployer.SshPrivateKeyFile(sshKeyFileName),
                 Labels = labels,
-                Target = sshCredentials.SshIp
+                Target = sshCredentials.SshIp,
+                SshPrivateKeySha256 = SshKeyOwnership.FingerprintBase64(sshCredentials.SshPrivateKey)
             };
             AddOrReplaceCredential(state, credential);
             return credential;
@@ -299,12 +301,9 @@ public static class StateManager
         }
     }
 
-    private static async Task SerializeStateAsync(FileStream stream, State state)
-    {
-        stream.Seek(0, SeekOrigin.Begin);
-        await JsonSerializer.SerializeAsync(stream, state, StateJsonSerializerContext.Default.State).ConfigureAwait(false);
-        stream.SetLength(stream.Position);
-        await stream.FlushAsync().ConfigureAwait(false);
-    }
+    private static Task SerializeStateAsync(FileStream stream, State state) =>
+        // Written to a temp file and renamed over the original so a crash cannot leave a truncated state file
+        AtomicFileWriter.ReplaceContentsAsync(stream, s =>
+            JsonSerializer.SerializeAsync(s, state, StateJsonSerializerContext.Default.State));
 }
 

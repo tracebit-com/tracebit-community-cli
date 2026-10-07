@@ -234,7 +234,15 @@ public class Remove
             force
         );
 
-        await Deployer.RemoveAwsCredential(awsCredential.AwsProfile, cancellationToken);
+        try
+        {
+            await Deployer.RemoveAwsCredential(awsCredential.AwsProfile, awsCredential.AwsAccessKeyId, cancellationToken);
+        }
+        catch (UnmanagedConfigEntryException e)
+        {
+            // Somebody else now owns the profile. Forget the canary but leave their files alone
+            AnsiConsole.MarkupLineInterpolated($"[yellow]{e.Message}[/]");
+        }
 
         StateManager.RemoveCredential(awsCredential);
 
@@ -250,7 +258,15 @@ public class Remove
             force
         );
 
-        await Deployer.RemoveSshCredential(sshCredential.Target, sshCredential.Path, cancellationToken);
+        try
+        {
+            await Deployer.RemoveSshCredential(sshCredential.Target, sshCredential.Path, sshCredential.SshPrivateKeySha256, cancellationToken);
+        }
+        catch (UnmanagedConfigEntryException e)
+        {
+            // The key on disk is no longer ours. Forget the canary but leave the file alone
+            AnsiConsole.MarkupLineInterpolated($"[yellow]{e.Message}[/]");
+        }
 
         StateManager.RemoveCredential(sshCredential);
     }

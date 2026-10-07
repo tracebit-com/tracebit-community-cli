@@ -81,7 +81,7 @@ public class DeployOptionsTests : IClassFixture<DeployOptionsTests.DeployCommand
     }
 
     [Theory]
-    [InlineData("deploy aws --aws-profile \"my profile\"", "Whitespace in AWS profile name not supported")]
+    [InlineData("deploy aws --aws-profile \"my profile\"", "Invalid AWS profile name")]
     [InlineData("deploy aws --aws-profile profile", "AWS profile name cannot be 'profile'")]
     public void Parse_InvalidAwsProfile_ReportsError(string commandLine, string expectedError)
     {
@@ -95,7 +95,7 @@ public class DeployOptionsTests : IClassFixture<DeployOptionsTests.DeployCommand
     {
         var result = _root.Parse("deploy ssh --ssh-key-file \"my key\"");
 
-        Assert.Contains(result.Errors, e => e.Message.Contains("Whitespace in SSH key file names not supported"));
+        Assert.Contains(result.Errors, e => e.Message.Contains("Invalid SSH key file name"));
     }
 
     [Fact]

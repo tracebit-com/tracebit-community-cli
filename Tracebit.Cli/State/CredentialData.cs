@@ -53,6 +53,10 @@ public class AwsCredentialData : CredentialData, IPrettyNamedType
 
     public string? AwsProfile { get; set; }
     public string? AwsRegion { get; set; }
+
+    // Access key ID last written to the profile, used to confirm the profile is still ours before replacing or removing it
+    [ShowInTable(false)]
+    public string? AwsAccessKeyId { get; set; }
 }
 
 public class SshCredentialData : CredentialData, IPrettyNamedType
@@ -62,6 +66,10 @@ public class SshCredentialData : CredentialData, IPrettyNamedType
     public override string TypeName { get; init; } = TypeDiscriminator;
     public static string PrettyTypeName => "SSH";
     public override string PrettyTypeNameInstance => PrettyTypeName;
+
+    // SHA-256 (hex) of the private key file last written, used to confirm the key file is still ours before deleting it
+    [ShowInTable(false)]
+    public string? SshPrivateKeySha256 { get; set; }
 }
 
 public abstract class HttpCredentialData : CredentialData { }

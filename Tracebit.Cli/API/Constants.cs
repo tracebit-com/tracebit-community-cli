@@ -12,11 +12,19 @@ namespace Tracebit.Cli.API
             {
                 var url = Environment.GetEnvironmentVariable(TracebitUrlVariable);
                 if (url is not null)
-                    return new Uri(url);
+                    return RequireHttps(new Uri(url));
                 return new UriBuilder { Scheme = "https", Host = TracebitHost }.Uri;
             }
         }
         public static Uri TracebitApiUrl { get; } = new Uri(TracebitUrl, "/api/");
+
+        // Credentials and tokens travel over this connection, so a plaintext override is never acceptable
+        internal static Uri RequireHttps(Uri url)
+        {
+            if (url.Scheme != Uri.UriSchemeHttps)
+                throw new InvalidOperationException($"{TracebitUrlVariable} must use https, got '{url}'");
+            return url;
+        }
 
         public const string TracebitCliSource = "tracebit-cli";
         public const string SourceTypeDefault = "endpoint";
@@ -27,7 +35,7 @@ namespace Tracebit.Cli.API
             {
                 var urlOverride = Environment.GetEnvironmentVariable(TracebitUrlVariable);
                 if (urlOverride is not null)
-                    return new Uri(urlOverride).Host;
+                    return RequireHttps(new Uri(urlOverride)).Host;
 
                 var environment = Environment.GetEnvironmentVariable(TracebitEnvironmentVariable);
                 if (environment is null)
