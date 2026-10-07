@@ -110,9 +110,8 @@ an over-eager assistant, see Tracebit's
 - **Insider collection.** Someone with legitimate access attempting to use credentials
   they have no working reason to use.
 
-The strongest example of what a canary finds that other tooling doesn't came from cloud
-infrastructure canaries in Tracebit's commercial platform rather than this CLI, but it is
-worth knowing. A customer had run Tracebit for about three months while holding off on one
+Canaries are great at finding gaps in your existing tooling. An example: a customer
+had run Tracebit for about three months while holding off on one
 particularly sensitive cloud account. Three days after finally deploying canaries there,
 an application read one. Triage established that the application had been compromised for
 more than three years and was being used regularly to enumerate the environment. CSPM and
