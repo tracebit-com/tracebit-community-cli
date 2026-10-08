@@ -6,11 +6,7 @@ public class Credentials
 {
     public static FileInfo File()
     {
-        var path = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            Program.AppName,
-            "credentials.json");
-        return new FileInfo(path);
+        return new FileInfo(Path.Combine(ConfigDirectory.Path, "credentials.json"));
     }
 
     // NOTE: this will remain null if no token can be loaded.
@@ -34,7 +30,7 @@ public class Credentials
         }
         catch (JsonException e)
         {
-            throw new Exception($"Your Tracebit credentials file might be corrupted. Please delete it from '{Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData)}' and try again.", e);
+            throw new Exception($"Your Tracebit credentials file might be corrupted. Please delete it from '{ConfigDirectory.Path}' and try again.", e);
         }
     }
 }

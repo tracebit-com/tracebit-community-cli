@@ -4,6 +4,7 @@ using System.Text.Json;
 using Tracebit.Cli.API;
 using Tracebit.Cli.API.CanaryCredentials;
 using Tracebit.Cli.Commands;
+using Tracebit.Cli.Config;
 using Tracebit.Cli.Deploy;
 
 using Labels = System.Collections.Generic.List<Tracebit.Cli.API.Label>;
@@ -31,10 +32,7 @@ public static class StateManager
             return new FileInfo(overridePath);
         }
 
-        return new FileInfo(Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            Program.AppName,
-            "state.json"));
+        return new FileInfo(Path.Combine(ConfigDirectory.Path, "state.json"));
     }
 
     /// <summary>

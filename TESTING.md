@@ -27,6 +27,36 @@ Location: `Tracebit.Cli.E2E.Tests/`
 - Tests complete user workflows
 - Cross-platform testing (Windows, Linux, macOS)
 - Tests error handling and user experience
+- Every test runs the CLI in a sandbox (`IsolatedCliEnvironment`): a temporary `HOME` and a temporary
+  `TRACEBIT_CONFIG_DIR` for `credentials.json` and `state.json`, so your real `~/.aws`, `~/.ssh` and CLI state are
+  never read or changed
+- Tests that write `~/.aws` or `~/.ssh` (`[SandboxedFact]`) skip on Windows, where the home directory cannot be
+  redirected
+
+#### Staging deploy tests
+
+`Staging/StagingDeployTests.cs` (`[StagingFact]`) deploys real AWS and SSH canaries on
+`community.stage.tracebit.com`, checks the files and state the CLI writes, then removes them again. They need a staging
+API token and skip without one:
+
+```bash
+export TRACEBIT_STAGING_API_TOKEN=<staging API token>
+dotnet test Tracebit.Cli.E2E.Tests/Tracebit.Cli.E2E.Tests.csproj
+```
+
+`Staging/StagingAlertTests.cs` goes one step further: it deploys a canary, runs `tracebit trigger`, and polls the
+alerts API (`GET /api/v1/alerts` and `/api/v1/alerts/{id}/logs`) until an alert for that canary's name appears. The
+token therefore needs the `canary-credentials:all:create`, `alerts:all:list` and `alerts:all:get` scopes, and the `ssh`
+and `aws` CLIs must be installed.
+
+- The SSH alert test runs by default and takes ~30 seconds. `ssh` ignores `HOME`, so the sandbox sets the test-only
+  `TRACEBIT_SSH_CONFIG`, which makes `tracebit trigger ssh` pass `-F <sandboxed ~/.ssh/config>`. The alert therefore
+  only fires if deploy wrote a working Host block. Real users never set it, so trigger runs what an attacker would.
+- The AWS alert test (`[CiStagingFact]`) waits ~5 minutes for CloudTrail, so it only runs when `CI=true`, which GitHub
+  Actions sets. Run it locally with `CI=true dotnet test ...`.
+
+In CI the token comes from the `TRACEBIT_STAGING_API_TOKEN` repository secret. Each test uses a unique canary name, so
+the parallel OS jobs do not collide on the shared staging tenant.
 
 ## Running Tests
 

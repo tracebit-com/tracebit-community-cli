@@ -53,6 +53,11 @@ jobs:
         run: dotnet test Tracebit.Cli.Integration.Tests/Tracebit.Cli.Integration.Tests.csproj --no-build --configuration Release --logger trx --collect:"XPlat Code Coverage" --settings coverlet.runsettings --results-directory ./coverage
 
       - name: Run E2E tests
+        # Only in the internal repository: the public mirror has no staging secret
+        if: github.repository == 'tracebit-com/tracebit-cli-internal'
+        env:
+          # Staging deploy tests skip when this is empty, e.g. on pull requests from forks
+          TRACEBIT_STAGING_API_TOKEN: ${{ secrets.TRACEBIT_STAGING_API_TOKEN }}
         run: dotnet test Tracebit.Cli.E2E.Tests/Tracebit.Cli.E2E.Tests.csproj --no-build --configuration Release --logger trx --collect:"XPlat Code Coverage" --settings coverlet.runsettings --results-directory ./coverage
 
       - name: Upload test results

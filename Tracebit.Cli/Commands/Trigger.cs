@@ -276,14 +276,26 @@ public class Trigger
         return true;
     }
 
+    // Test only: OpenSSH reads ~/.ssh from the OS user record and ignores HOME, so sandboxed E2E tests point it at the
+    // config the CLI wrote instead. Unset for real users, so trigger runs what an attacker on this machine would run
+    private const string SshConfigOverrideVariable = "TRACEBIT_SSH_CONFIG";
+
     private static async Task TriggerSshCredentialAsync(CredentialData credentialData, CancellationToken cancellationToken)
     {
         const string user = "admin";
+        var arguments = $"-o ConnectTimeout=5 -o StrictHostKeyChecking=no {user}@{credentialData.Target}";
+        var sshConfigOverride = Environment.GetEnvironmentVariable(SshConfigOverrideVariable);
+        if (!string.IsNullOrEmpty(sshConfigOverride))
+        {
+            var knownHostsFile = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(sshConfigOverride))!, "known_hosts");
+            arguments = $"-F \"{sshConfigOverride}\" -o UserKnownHostsFile=\"{knownHostsFile}\" {arguments}";
+        }
+
         using var process = new Process();
         process.StartInfo = new ProcessStartInfo
         {
             FileName = "ssh",
-            Arguments = $"-o ConnectTimeout=5 -o StrictHostKeyChecking=no {user}@{credentialData.Target}",
+            Arguments = arguments,
             RedirectStandardError = true,
             UseShellExecute = false,
             CreateNoWindow = true

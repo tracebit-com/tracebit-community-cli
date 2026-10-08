@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace Tracebit.Cli.E2E.Tests.Helpers;
 
@@ -8,6 +9,14 @@ namespace Tracebit.Cli.E2E.Tests.Helpers;
 /// </summary>
 public static class CliTestHelper
 {
+    private static readonly TimeSpan CommandTimeout = TimeSpan.FromMinutes(2);
+
+    // Spectre.Console emits colour codes when it detects a CI environment such as GitHub Actions, even with redirected
+    // output. Tests assert on the text, so drop them
+    private static readonly Regex AnsiEscape = new(@"\x1B\[[0-9;?]*[ -/]*[@-~]", RegexOptions.Compiled);
+
+    private static string StripAnsi(string text) => AnsiEscape.Replace(text, "");
+
     /// <summary>
     /// Execute the CLI with the given arguments
     /// </summary>
@@ -23,6 +32,7 @@ public static class CliTestHelper
         {
             FileName = cliBinaryPath,
             Arguments = arguments,
+            RedirectStandardInput = true,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,
@@ -72,16 +82,31 @@ public static class CliTestHelper
         };
 
         process.Start();
+        // Close stdin so any prompt fails fast instead of waiting for input that never comes
+        process.StandardInput.Close();
         process.BeginOutputReadLine();
         process.BeginErrorReadLine();
 
-        await process.WaitForExitAsync(cancellationToken);
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(CommandTimeout);
+        try
+        {
+            await process.WaitForExitAsync(timeout.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            process.Kill(entireProcessTree: true);
+            throw new TimeoutException($"CLI command did not exit within {CommandTimeout}.\n" +
+                                       $"Arguments: {arguments}\n" +
+                                       $"Stdout: {outputBuilder}\n" +
+                                       $"Stderr: {errorBuilder}");
+        }
 
         return new CommandResult
         {
             ExitCode = process.ExitCode,
-            StandardOutput = outputBuilder.ToString().TrimEnd(),
-            StandardError = errorBuilder.ToString().TrimEnd()
+            StandardOutput = StripAnsi(outputBuilder.ToString()).TrimEnd(),
+            StandardError = StripAnsi(errorBuilder.ToString()).TrimEnd()
         };
     }
 
@@ -135,12 +160,14 @@ public static class CliTestHelper
             Path.Combine(solutionDir, "Tracebit.Cli", "bin", "Release", targetFramework, binaryName),
         ];
 
-        foreach (var path in possiblePaths)
+        // Prefer the most recently built binary so a stale Debug build never shadows a fresh Release one
+        var newest = possiblePaths
+            .Where(File.Exists)
+            .OrderByDescending(File.GetLastWriteTimeUtc)
+            .FirstOrDefault();
+        if (newest is not null)
         {
-            if (File.Exists(path))
-            {
-                return path;
-            }
+            return newest;
         }
 
         throw new FileNotFoundException(

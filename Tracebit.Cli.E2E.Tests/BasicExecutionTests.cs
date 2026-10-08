@@ -66,11 +66,13 @@ public class BasicExecutionTests
     [Fact]
     public async Task ShowCommand_WithoutCredentials_ShowsHelpfulMessage()
     {
-        var result = await CliTestHelper.ExecuteAsync("show");
+        // Sandboxed so the test never reads the real user's state
+        await using var env = new IsolatedCliEnvironment();
+
+        var result = await env.RunAsync("show");
 
         Assert.Equal(0, result.ExitCode);
-        // Should show message about no credentials or empty state
-        Assert.False(string.IsNullOrEmpty(result.StandardOutput));
+        Assert.Contains("No credentials are deployed", result.StandardOutput);
     }
 }
 
