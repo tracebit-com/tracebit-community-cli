@@ -23,6 +23,14 @@ static class Auth
     private const string OAuthCallbackPath = "/callback/";
     private static readonly Uri OAuthCallbackUri = new(OAuthListenerBaseUri, OAuthCallbackPath);
 
+    // Keeps the callback pages readable when the Portal stylesheet does not define the classes they use
+    private const string FallbackStyle = """
+        <style>
+            body { margin: 0; font-family: system-ui, sans-serif; background-color: #F3EFEC; color: #231F20; }
+            @media (prefers-color-scheme: dark) { body { background-color: #231F20; color: #F3EFEC; } }
+        </style>
+        """;
+
     public static JwtSecurityTokenHandler TokenHandler = new();
     public static TokenValidationParameters TokenValidationParameters = new()
     {
@@ -212,20 +220,11 @@ static class Auth
             <!DOCTYPE html>
             <html>
             <head>
-                <script>
-                    window.close();
-                    // Check theming, see https://tailwindcss.com/docs/dark-mode#with-system-theme-support
-                    document.documentElement.classList.toggle(
-                        "dark",
-                        localStorage.getItem('color-theme') === "dark",
-                    );
-                    document.documentElement.classList.toggle(
-                        "light",
-                        localStorage.getItem('color-theme') === "light",
-                    );
-                </script>
+                <meta charset="utf-8">
+                <meta name="color-scheme" content="light dark">
                 <title>Tracebit CLI Login Succeeded</title>
                 <link href="{new Uri(Constants.TracebitUrl, "css/output.css")}" rel="stylesheet">
+                {FallbackStyle}
             </head>
             <body class="text-black bg-gray-50 dark:text-gray-400 dark:bg-gray-900 grow min-h-screen flex flex-col items-center justify-center gap-12">
                 <div class="flex flex-row items-center p-2 gap-1"><img class="h-10 w-10 mr-2" src="{new Uri(Constants.TracebitUrl, "images/logo.png")}" alt="Tracebit">
@@ -239,6 +238,10 @@ static class Auth
                         You may now close this page
                     </p>
                 </div>
+                <script>
+                    // Browsers only allow this for windows opened by a script, so the page above must stay readable
+                    window.addEventListener("load", () => window.close());
+                </script>
             </body>
             </html>
             """;
@@ -247,19 +250,11 @@ static class Auth
             <!DOCTYPE html>
             <html>
             <head>
-                <script>
-                    // Check theming, see https://tailwindcss.com/docs/dark-mode#with-system-theme-support
-                    document.documentElement.classList.toggle(
-                        "dark",
-                        localStorage.getItem('color-theme') === "dark",
-                    );
-                    document.documentElement.classList.toggle(
-                        "light",
-                        localStorage.getItem('color-theme') === "light",
-                    );
-                </script>
+                <meta charset="utf-8">
+                <meta name="color-scheme" content="light dark">
                 <title>Tracebit CLI Login Error</title>
                 <link href="{new Uri(Constants.TracebitUrl, "css/output.css")}" rel="stylesheet">
+                {FallbackStyle}
             </head>
             <body class="text-black bg-gray-50 dark:text-gray-400 dark:bg-gray-900 grow min-h-screen flex flex-col items-center justify-center gap-12">
                 <div class="flex flex-row items-center p-2 gap-1"><img class="h-10 w-10 mr-2" src="{new Uri(Constants.TracebitUrl, "images/logo.png")}" alt="Tracebit">
@@ -309,14 +304,12 @@ static class Auth
                         await Task.Delay(1000);
                         return await ExchangeApiToken(token, cancellationToken);
                     });
-                    response.StatusCode = (int)HttpStatusCode.OK;
-                    await response.OutputStream.WriteAsync(successResponseBuffer, cancellationToken);
+                    await WriteHtmlResponseAsync(response, successResponseBuffer, cancellationToken);
                 }
                 catch (Exception e)
                 {
                     AnsiConsole.Console.WritePrettyException(new Exception($"Failed to exchange API token for a long-lived token: {e.Message}", e), errorDetail, stacktrace);
-                    response.StatusCode = (int)HttpStatusCode.OK;
-                    await response.OutputStream.WriteAsync(exchangeErrorResponseBuffer, cancellationToken);
+                    await WriteHtmlResponseAsync(response, exchangeErrorResponseBuffer, cancellationToken);
                 }
             }
             else
@@ -324,10 +317,20 @@ static class Auth
                 response.StatusCode = (int)HttpStatusCode.BadRequest;
             }
 
-            await response.OutputStream.FlushAsync(cancellationToken);
+            response.Close();
         }
 
         return longLivedToken;
+    }
+
+    // A fixed length and no keep-alive let the browser render the page before the listener closes the connection
+    private static async Task WriteHtmlResponseAsync(HttpListenerResponse response, byte[] body, CancellationToken cancellationToken)
+    {
+        response.StatusCode = (int)HttpStatusCode.OK;
+        response.ContentType = "text/html; charset=utf-8";
+        response.ContentLength64 = body.Length;
+        response.KeepAlive = false;
+        await response.OutputStream.WriteAsync(body, cancellationToken);
     }
 
     private static async Task<string> ExchangeApiToken(string token, CancellationToken cancellationToken)
