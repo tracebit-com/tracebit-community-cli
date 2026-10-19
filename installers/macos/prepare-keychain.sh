@@ -26,7 +26,7 @@ security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
 
 # import certificates to keychain
 security import <(echo -n "$APPLICATION_KEY_CERTIFICATE_BASE64" | base64 --decode) -P "$APPLICATION_P12_PASSWORD" -A -f pkcs12 -k $KEYCHAIN_PATH
-security import <(echo -n "$INSTALLER_KEY_CERTIFICATE_BASE64" | base64 --decode) -P "$INSTALLER_P12_PASSWORD" -A -f pkcs12 -k $KEYCHAIN_PATH \
+security import <(echo -n "$INSTALLER_KEY_CERTIFICATE_BASE64" | base64 --decode) -P "$INSTALLER_P12_PASSWORD" -A -f pkcs12 -k $KEYCHAIN_PATH
 security import $INTERMEDIATE_CA -k $KEYCHAIN_PATH || true
 
 # set keychain as default for codesign
