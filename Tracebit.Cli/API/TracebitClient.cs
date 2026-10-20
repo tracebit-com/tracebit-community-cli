@@ -108,6 +108,16 @@ public class TracebitClient(HttpClient httpClient) : AuthenticatedApiClient(http
         Value = Commands.Utils.GetCurrentVersion()?.ToFullString() ?? "unknown"
     };
 
+    private const string SourceLabelName = "source";
+    private const string SourceTypeLabelName = "source_type";
+
+    private static void AddLabelIfMissing(Labels labels, string name, string value)
+    {
+        if (labels.Any(l => l.Name == name))
+            return;
+        labels.Add(new Label { Name = name, Value = value });
+    }
+
     public async Task<IssueCredentialsResponse> IssueCredentials(string name, List<string> credentialTypes, List<Label>? labels)
     {
         var requestBody = CreateIssueRequest(name, credentialTypes, labels);
@@ -195,6 +205,9 @@ public class TracebitClient(HttpClient httpClient) : AuthenticatedApiClient(http
     {
         var requestLabels = labels?.ToList() ?? [];
         requestLabels.Add(VersionLabel);
+        // The email endpoint has no source fields, so the server reads them from these labels
+        AddLabelIfMissing(requestLabels, SourceLabelName, Constants.TracebitCliSource);
+        AddLabelIfMissing(requestLabels, SourceTypeLabelName, Constants.SourceTypeEmail);
         var requestBody = new GenerateAndSendCanaryEmailRequest
         {
             Labels = requestLabels,

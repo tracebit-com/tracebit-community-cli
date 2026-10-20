@@ -28,6 +28,7 @@ namespace Tracebit.Cli.API
 
         public const string TracebitCliSource = "tracebit-cli";
         public const string SourceTypeDefault = "endpoint";
+        public const string SourceTypeEmail = "email";
 
         public static string TracebitHost
         {

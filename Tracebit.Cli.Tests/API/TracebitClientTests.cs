@@ -184,6 +184,66 @@ public class TracebitClientTests
         Assert.Equal("target@example.com", result.EmailTo);
     }
 
+    [Theory]
+    [InlineData(null, "tracebit-cli", "email")]
+    [InlineData("my-laptop", "my-laptop", "email")]
+    public async Task GenerateAndSendCanaryEmailAsync_SendsSourceLabels(
+        string? userSource,
+        string expectedSource,
+        string expectedSourceType)
+    {
+        var responseJson = JsonSerializer.Serialize(new GenerateAndSendCanaryEmailResponse
+        {
+            EmailFrom = "canary@test.com",
+            EmailTo = "target@example.com",
+            EmailSubject = "Important Document",
+            CredentialExpiresAt = DateTime.UtcNow.AddDays(30),
+            CredentialTriggerableAfter = DateTime.UtcNow.AddMinutes(5)
+        });
+
+        HttpRequestMessage? capturedRequest = null;
+        var mockHandler = new Mock<HttpMessageHandler>();
+        mockHandler
+            .Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>()
+            )
+            .Callback<HttpRequestMessage, CancellationToken>((req, _) => capturedRequest = req)
+            .ReturnsAsync(new HttpResponseMessage
+            {
+                StatusCode = HttpStatusCode.OK,
+                Content = new StringContent(responseJson)
+            });
+
+        var httpClient = new HttpClient(mockHandler.Object)
+        {
+            BaseAddress = new Uri("https://api.test.com")
+        };
+
+        var client = new TracebitClient(httpClient);
+
+        var labels = userSource is null
+            ? null
+            : new List<Label> { new() { Name = "source", Value = userSource } };
+
+        await client.GenerateAndSendCanaryEmailAsync(labels, CancellationToken.None);
+
+        Assert.NotNull(capturedRequest);
+        var requestBody = await capturedRequest!.Content!.ReadAsStringAsync();
+        var sentLabels = JsonSerializer.Deserialize<JsonElement>(requestBody)
+            .GetProperty("labels")
+            .EnumerateArray()
+            .Select(l => (Name: l.GetProperty("name").GetString(), Value: l.GetProperty("value").GetString()))
+            .ToList();
+
+        Assert.Single(sentLabels, l => l.Name == "source");
+        Assert.Single(sentLabels, l => l.Name == "source_type");
+        Assert.Contains(("source", expectedSource), sentLabels);
+        Assert.Contains(("source_type", expectedSourceType), sentLabels);
+    }
+
     [Fact]
     public async Task GenerateAndSendCanaryEmailAsync_QuotaExceeded_ThrowsQuotaExceededException()
     {
